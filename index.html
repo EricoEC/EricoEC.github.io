@@ -20,6 +20,7 @@
             padding: 20px;
             margin: 0;
             cursor: default; /* 消除文本选中光标，不影响点击 */
+            touch-action: none; /* 禁止浏览器默认触控行为（如缩放） */
         }
         /* 标题样式（可选，居中显示） */
         h1 { margin-bottom: 25px; font-size: 28px; text-shadow: 0 0 8px rgba(0,0,0,0.5); }
@@ -62,13 +63,13 @@
             width: 10px;
             height: 10px;
             position: fixed;
-            background: #f00;
+            background: currentColor; /* 继承颜色 */
             transform: rotate(45deg);
             -webkit-transform: rotate(45deg);
             -moz-transform: rotate(45deg);
             opacity: 1;
-            z-index: 9999; /* 确保爱心在最上层，不被遮挡 */
-            pointer-events: none; /* 避免爱心遮挡页面交互 */
+            z-index: 9999; /* 确保在最上层，不被遮挡 */
+            pointer-events: none; /* 避免遮挡页面交互 */
         }
         .heart:before,
         .heart:after {
@@ -82,12 +83,36 @@
             position: absolute;
         }
         .heart:before {
-            top: -5px; /* 偏移量同步缩小为尺寸的一半 */
+            top: -5px; /* 偏移量为尺寸的一半 */
             left: 0;
         }
         .heart:after {
             top: 0;
-            left: -5px; /* 偏移量同步缩小为尺寸的一半 */
+            left: -5px; /* 偏移量为尺寸的一半 */
+        }
+        /* 五角星样式（增大一倍，20px→缩放后10px，与爱心等大） */
+        .star {
+            width: 20px;
+            height: 20px;
+            position: fixed;
+            color: currentColor; /* 继承颜色 */
+            opacity: 1;
+            z-index: 9999;
+            pointer-events: none;
+            clip-path: polygon(
+                50% 0%, 
+                61% 35%, 
+                98% 35%, 
+                68% 57%, 
+                79% 91%, 
+                50% 70%, 
+                21% 91%, 
+                32% 57%, 
+                2% 35%, 
+                39% 35%
+            );
+            background: currentColor;
+            transform: scale(0.5);
         }
     </style>
 </head>
@@ -253,44 +278,117 @@
         citySelect.addEventListener("change", () => fetchWeather(citySelect.value));
     </script>
 
-    <!-- 修复后的彩色爱心点击动画代码 -->
+    <!-- 支持多指点击+滑动轨迹的随机爱心/五角星动画代码 -->
     <script>
         ! function(e, t, a) {
+            let isDragging = false; // 标记是否处于滑动状态
+            const shapeDensity = 8; // 滑动时形状密度（值越小越密集）
+
             function r() {
+                // 同时处理爱心和五角星的动画
                 for (var e = 0; e < s.length; e++) s[e].alpha <= 0 ? 
                 (t.body.removeChild(s[e].el), s.splice(e, 1)) : 
                 (s[e].y--, s[e].scale += .003, s[e].alpha -= .012,
-                s[e].el.style.cssText = "left:" + s[e].x + "px;top:" + s[e].y + "px;opacity:" + s[e].alpha + 
-                ";transform:scale(" + s[e].scale + "," + s[e].scale + ") rotate(45deg);background:" + s[e].color + ";z-index:9999;pointer-events:none;");
+                s[e].el.style.cssText = `left:${s[e].x}px;top:${s[e].y}px;opacity:${s[e].alpha};transform:scale(${s[e].scale},${s[e].scale}) ${s[e].type === 'heart' ? 'rotate(45deg)' : ''};color:${s[e].color};z-index:9999;pointer-events:none;`);
                 requestAnimationFrame(r)
             }
-            // 修复：监听document点击（覆盖整个屏幕），而非window.onclick
+
+            // 单指点击（PC/手机）
             function n() {
                 t.addEventListener('click', function(e) {
-                    o(e); // 直接触发爱心生成，不依赖原有onclick
+                    if (!isDragging) o(e.clientX, e.clientY); // 非滑动时才触发点击
                 });
             }
-            function o(e) {
+
+            // 多指点击（touchstart）
+            function i() {
+                t.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    isDragging = true;
+                    // 多指同时按下，每个点生成一个形状
+                    for (let touch of e.touches) {
+                        o(touch.clientX, touch.clientY);
+                    }
+                }, { passive: false });
+            }
+
+            // 滑动轨迹（touchmove）- 沿滑动路径生成形状
+            function d() {
+                t.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                    if (!isDragging) return;
+                    // 滑动时遍历所有触控点，按密度生成形状
+                    for (let touch of e.touches) {
+                        // 控制形状密度，避免过于密集
+                        const random = Math.floor(Math.random() * shapeDensity);
+                        if (random === 0) o(touch.clientX, touch.clientY);
+                    }
+                }, { passive: false });
+            }
+
+            // 结束滑动（touchend/touchcancel）
+            function l() {
+                t.addEventListener('touchend', function() {
+                    isDragging = false;
+                });
+                t.addEventListener('touchcancel', function() {
+                    isDragging = false;
+                });
+            }
+
+            // PC端鼠标滑动（mousemove）
+            function m() {
+                t.addEventListener('mousedown', function(e) {
+                    isDragging = true;
+                    o(e.clientX, e.clientY); // 鼠标按下时生成第一个形状
+                });
+                t.addEventListener('mousemove', function(e) {
+                    if (!isDragging) return;
+                    // 鼠标滑动时按密度生成形状
+                    const random = Math.floor(Math.random() * shapeDensity);
+                    if (random === 0) o(e.clientX, e.clientY);
+                });
+                t.addEventListener('mouseup', function() {
+                    isDragging = false;
+                });
+                t.addEventListener('mouseleave', function() {
+                    isDragging = false;
+                });
+            }
+
+            // 生成随机形状（爱心/五角星）
+            function o(x, y) {
+                const shapeType = Math.random() > 0.5 ? 'heart' : 'star'; // 50%概率
                 var a = t.createElement("div");
-                a.className = "heart", 
+                a.className = shapeType;
+                const offset = shapeType === 'heart' ? 5 : 10; // 偏移量适配
                 s.push({
                     el: a,
-                    x: e.clientX - 5, // 偏移量同步缩小为新尺寸的一半（10px/2=5px）
-                    y: e.clientY - 5,
+                    x: x - offset,
+                    y: y - offset,
                     scale: 1,
                     alpha: 1,
-                    color: c()
-                }), 
-                t.body.appendChild(a)
+                    color: c(),
+                    type: shapeType
+                });
+                t.body.appendChild(a);
             }
+
+            // 随机彩色
             function c() {
                 return "rgb(" + ~~(230 + 25 * Math.random()) + "," + ~~(100 + 155 * Math.random()) + "," + ~~(100 + 155 * Math.random()) + ")"
             }
-            var s = [];
+
+            var s = []; // 存储所有形状元素
             e.requestAnimationFrame = e.requestAnimationFrame || e.webkitRequestAnimationFrame || e.mozRequestAnimationFrame || e.oRequestAnimationFrame || e.msRequestAnimationFrame || function(e) {
                 setTimeout(e, 1e3 / 60)
             };
-            n(), r()
+            n(); // 单指点击
+            i(); // 多指点击
+            d(); // 手机滑动
+            l(); // 结束滑动
+            m(); // PC鼠标滑动
+            r(); // 启动动画
         }(window, document);
     </script>
 </body>
