@@ -19,6 +19,7 @@
             justify-content: center;
             padding: 20px;
             margin: 0;
+            cursor: default; /* 消除文本选中光标，不影响点击 */
         }
         /* 标题样式（可选，居中显示） */
         h1 { margin-bottom: 25px; font-size: 28px; text-shadow: 0 0 8px rgba(0,0,0,0.5); }
@@ -56,10 +57,10 @@
             font-size: 14px; 
             color: rgba(255,255,255,0.7);
         }
-        /* 标准爱心形状样式（新增） */
+        /* 缩小40%后的爱心样式（原16px→10px） */
         .heart {
-            width: 16px;
-            height: 16px;
+            width: 10px;
+            height: 10px;
             position: fixed;
             background: #f00;
             transform: rotate(45deg);
@@ -67,12 +68,13 @@
             -moz-transform: rotate(45deg);
             opacity: 1;
             z-index: 9999; /* 确保爱心在最上层，不被遮挡 */
+            pointer-events: none; /* 避免爱心遮挡页面交互 */
         }
         .heart:before,
         .heart:after {
             content: '';
-            width: 16px;
-            height: 16px;
+            width: 10px;
+            height: 10px;
             background: inherit;
             border-radius: 50%;
             -webkit-border-radius: 50%;
@@ -80,12 +82,12 @@
             position: absolute;
         }
         .heart:before {
-            top: -8px;
+            top: -5px; /* 偏移量同步缩小为尺寸的一半 */
             left: 0;
         }
         .heart:after {
             top: 0;
-            left: -8px;
+            left: -5px; /* 偏移量同步缩小为尺寸的一半 */
         }
     </style>
 </head>
@@ -251,7 +253,7 @@
         citySelect.addEventListener("change", () => fetchWeather(citySelect.value));
     </script>
 
-    <!-- 彩色爱心点击动画代码（新增，整合到此处） -->
+    <!-- 修复后的彩色爱心点击动画代码 -->
     <script>
         ! function(e, t, a) {
             function r() {
@@ -259,22 +261,22 @@
                 (t.body.removeChild(s[e].el), s.splice(e, 1)) : 
                 (s[e].y--, s[e].scale += .003, s[e].alpha -= .012,
                 s[e].el.style.cssText = "left:" + s[e].x + "px;top:" + s[e].y + "px;opacity:" + s[e].alpha + 
-                ";transform:scale(" + s[e].scale + "," + s[e].scale + ") rotate(45deg);background:" + s[e].color + ";z-index:9999;");
+                ";transform:scale(" + s[e].scale + "," + s[e].scale + ") rotate(45deg);background:" + s[e].color + ";z-index:9999;pointer-events:none;");
                 requestAnimationFrame(r)
             }
+            // 修复：监听document点击（覆盖整个屏幕），而非window.onclick
             function n() {
-                var t = "function" == typeof e.onclick && e.onclick;
-                e.onclick = function(e) {
-                    t && t(), o(e)
-                }
+                t.addEventListener('click', function(e) {
+                    o(e); // 直接触发爱心生成，不依赖原有onclick
+                });
             }
             function o(e) {
                 var a = t.createElement("div");
                 a.className = "heart", 
                 s.push({
                     el: a,
-                    x: e.clientX - 8,
-                    y: e.clientY - 8,
+                    x: e.clientX - 5, // 偏移量同步缩小为新尺寸的一半（10px/2=5px）
+                    y: e.clientY - 5,
                     scale: 1,
                     alpha: 1,
                     color: c()
