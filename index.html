@@ -20,7 +20,7 @@
             padding: 20px;
             margin: 0;
             cursor: default; /* 消除文本选中光标，不影响点击 */
-            touch-action: none; /* 禁止浏览器默认触控行为（如缩放） */
+            /* 移除 touch-action: none，允许页面滚动 */
         }
         /* 标题样式（可选，居中显示） */
         h1 { margin-bottom: 25px; font-size: 28px; text-shadow: 0 0 8px rgba(0,0,0,0.5); }
@@ -278,14 +278,19 @@
         citySelect.addEventListener("change", () => fetchWeather(citySelect.value));
     </script>
 
-    <!-- 支持多指点击+滑动轨迹的随机爱心/五角星动画代码 -->
+    <!-- 支持多指点击+长按滑动特效+页面滚动兼容的动画代码 -->
     <script>
         ! function(e, t, a) {
-            let isDragging = false; // 标记是否处于滑动状态
-            const shapeDensity = 8; // 滑动时形状密度（值越小越密集）
+            let isDragging = false; // 标记是否处于滑动特效状态
+            let isLongPress = false; // 标记是否长按（触发特效的前提）
+            let pressTimer = null; // 长按计时器
+            const shapeDensity = 8; // 滑动时形状密度
+            const maxShapeCount = 150; // 最大形状数量（调整为150）
+            const longPressDelay = 300; // 长按触发时间（300毫秒，可调整）
+            var s = []; // 存储所有形状元素
 
+            // 动画循环（清理透明元素）
             function r() {
-                // 同时处理爱心和五角星的动画
                 for (var e = 0; e < s.length; e++) s[e].alpha <= 0 ? 
                 (t.body.removeChild(s[e].el), s.splice(e, 1)) : 
                 (s[e].y--, s[e].scale += .003, s[e].alpha -= .012,
@@ -296,57 +301,58 @@
             // 单指点击（PC/手机）
             function n() {
                 t.addEventListener('click', function(e) {
-                    if (!isDragging) o(e.clientX, e.clientY); // 非滑动时才触发点击
+                    if (!isDragging) addShape(e.clientX, e.clientY);
                 });
             }
 
-            // 多指点击（touchstart）
+            // 移动端：触摸开始（判断长按/点击）
             function i() {
                 t.addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    isDragging = true;
-                    // 多指同时按下，每个点生成一个形状
-                    for (let touch of e.touches) {
-                        o(touch.clientX, touch.clientY);
-                    }
-                }, { passive: false });
+                    const touch = e.touches[0];
+                    // 启动长按计时器
+                    pressTimer = setTimeout(() => {
+                        isLongPress = true;
+                        isDragging = true;
+                        addShape(touch.clientX, touch.clientY); // 长按后生成第一个形状
+                    }, longPressDelay);
+                }, { passive: true }); // passive:true 允许页面滚动
             }
 
-            // 滑动轨迹（touchmove）- 沿滑动路径生成形状
+            // 移动端：触摸移动（区分长按滑动/正常滚动）
             function d() {
                 t.addEventListener('touchmove', function(e) {
-                    e.preventDefault();
-                    if (!isDragging) return;
-                    // 滑动时遍历所有触控点，按密度生成形状
-                    for (let touch of e.touches) {
-                        // 控制形状密度，避免过于密集
-                        const random = Math.floor(Math.random() * shapeDensity);
-                        if (random === 0) o(touch.clientX, touch.clientY);
-                    }
+                    if (!isLongPress) return; // 未长按，不触发特效（允许滚动）
+                    e.preventDefault(); // 长按滑动时，阻止滚动（避免冲突）
+                    const touch = e.touches[0];
+                    const random = Math.floor(Math.random() * shapeDensity);
+                    if (random === 0) addShape(touch.clientX, touch.clientY);
                 }, { passive: false });
             }
 
-            // 结束滑动（touchend/touchcancel）
+            // 移动端：触摸结束（重置状态）
             function l() {
                 t.addEventListener('touchend', function() {
+                    clearTimeout(pressTimer); // 清除计时器
+                    isLongPress = false;
                     isDragging = false;
                 });
                 t.addEventListener('touchcancel', function() {
+                    clearTimeout(pressTimer);
+                    isLongPress = false;
                     isDragging = false;
                 });
             }
 
-            // PC端鼠标滑动（mousemove）
+            // PC端：鼠标滑动（按住拖动触发特效）
             function m() {
                 t.addEventListener('mousedown', function(e) {
                     isDragging = true;
-                    o(e.clientX, e.clientY); // 鼠标按下时生成第一个形状
+                    addShape(e.clientX, e.clientY);
                 });
                 t.addEventListener('mousemove', function(e) {
                     if (!isDragging) return;
-                    // 鼠标滑动时按密度生成形状
                     const random = Math.floor(Math.random() * shapeDensity);
-                    if (random === 0) o(e.clientX, e.clientY);
+                    if (random === 0) addShape(e.clientX, e.clientY);
                 });
                 t.addEventListener('mouseup', function() {
                     isDragging = false;
@@ -356,12 +362,16 @@
                 });
             }
 
-            // 生成随机形状（爱心/五角星）
-            function o(x, y) {
-                const shapeType = Math.random() > 0.5 ? 'heart' : 'star'; // 50%概率
+            // 生成形状（数量限制：先进先出）
+            function addShape(x, y) {
+                if (s.length >= maxShapeCount) {
+                    const oldestShape = s.shift();
+                    t.body.removeChild(oldestShape.el);
+                }
+                const shapeType = Math.random() > 0.5 ? 'heart' : 'star';
                 var a = t.createElement("div");
                 a.className = shapeType;
-                const offset = shapeType === 'heart' ? 5 : 10; // 偏移量适配
+                const offset = shapeType === 'heart' ? 5 : 10;
                 s.push({
                     el: a,
                     x: x - offset,
@@ -379,14 +389,13 @@
                 return "rgb(" + ~~(230 + 25 * Math.random()) + "," + ~~(100 + 155 * Math.random()) + "," + ~~(100 + 155 * Math.random()) + ")"
             }
 
-            var s = []; // 存储所有形状元素
             e.requestAnimationFrame = e.requestAnimationFrame || e.webkitRequestAnimationFrame || e.mozRequestAnimationFrame || e.oRequestAnimationFrame || e.msRequestAnimationFrame || function(e) {
                 setTimeout(e, 1e3 / 60)
             };
             n(); // 单指点击
-            i(); // 多指点击
-            d(); // 手机滑动
-            l(); // 结束滑动
+            i(); // 触摸开始
+            d(); // 触摸移动
+            l(); // 触摸结束
             m(); // PC鼠标滑动
             r(); // 启动动画
         }(window, document);
