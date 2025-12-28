@@ -1,120 +1,223 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>动态线条背景（修复版）</title>
+    <title>欢迎访问我的主页！>huan ti
     <style>
-        * { margin: 0; padding: 0; }
-        body { overflow: hidden; background: #222; }
-        canvas { display: block; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* 动态线条背景：全屏底层固定 */
+        #c { position: fixed; top: 0; left: 0; z-index: -1; }
+        body { 
+            font-family: "微软雅黑", sans-serif; 
+            color: #fff; /* 所有文字全白 */
+            min-height: 100vh;
+            display: flex; /* 弹性布局居中 */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
+        /* 标题样式（可选，居中显示） */
+        h1 { margin-bottom: 25px; font-size: 28px; text-shadow: 0 0 8px rgba(0,0,0,0.5); }
+        /* 城市选择器：居中适配 */
+        .city-select-wrap { margin-bottom: 20px; }
+        label { font-size: 18px; margin-right: 10px; }
+        select { 
+            padding: 10px 8px; 
+            border-radius: 6px; 
+            border: none; 
+            font-size: 16px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            cursor: pointer;
+        }
+        /* 天气预报模块：居中悬浮 + 半透黑背景 */
+        #weather { 
+            display: flex; 
+            align-items: center; 
+            gap: 20px; 
+            padding: 25px; 
+            border: 1px solid rgba(255,255,255,0.2); /* 淡白边框 */
+            border-radius: 12px;
+            background: rgba(0,0,0,0.6); /* 半透黑背景，不挡线条 */
+            backdrop-filter: blur(8px); /* 毛玻璃增强质感 */
+            max-width: 400px;
+            width: 100%;
+        }
+        #weather img { width: 60px; height: 60px; }
+        .weather-text { font-size: 18px; line-height: 1.8; }
+        /* 版权信息：底部居中 */
+        .copyright { 
+            position: fixed; 
+            bottom: 20px; 
+            font-size: 14px; 
+            color: rgba(255,255,255,0.7);
+        }
     </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+    <canvas id="c"></canvas>
 
-<script>
-// 简化版：移除复杂语法，兼容所有浏览器
-const c = document.getElementById('c');
-const ctx = c.getContext('2d');
-let w = c.width = window.innerWidth;
-let h = c.height = window.innerHeight;
-let tick = 0;
-const TAU = Math.PI * 2; // 替代自定义Math.TAU，避免兼容问题
-const vertices = [];
+    <h1>实时天气预报</h1>
 
-// 简化配置参数，减少计算复杂度
-const opts = {
-    hexLength: 30,
-    timeStep: 0.01,
-    randomJig: 8,
-    repaintColor: 'rgba(0,0,0,0.1)'
-};
+    <!-- 城市选择 -->
+    <div class="city-select-wrap">
+        <label for="city-select">选择城市：</label>
+        <select id="city-select">
+            <option value="101010100">北京</option>
+            <option value="101020100">上海</option>
+            <option value="101280101">广州</option>
+            <option value="101210101">武汉</option>
+            <option value="101030100">天津</option>
+            <option value="101190101">香港</option>
+            <option value="101140101">西安</option>
+            <option value="101040100">重庆</option>
+            <option value="101230101">杭州</option>
+            <option value="101250101">成都</option>
+        </select>
+    </div>
 
-// 顶点类（用ES6简化语法）
-class Vertex {
-    constructor(x, y) {
-        this.len = Math.sqrt(x * x + y * y);
-        this.rad = Math.acos(x / this.len) * (y > 0 ? 1 : -1) + 0.13;
-        this.prevX = x;
-        this.prevY = y;
-    }
+    <!-- 天气模块 -->
+    <div id="weather">
+        <img id="weather-icon" src="" alt="天气图标">
+        <div class="weather-text">
+            <p id="weather-city">城市: 加载中...</p>
+            <p id="weather-info">天气: 加载中...</p>
+            <p id="weather-temp">温度: 加载中...</p>
+        </div>
+    </div>
 
-    step() {
-        // 简化计算逻辑，避免复杂函数嵌套
-        const prop = this.len / opts.hexLength / 10 - tick;
-        const excitement = Math.sin(prop) ** 2;
-        const nextLen = this.len + Math.sin(tick);
-        const nextRad = this.rad + (excitement + prop) * 0.5;
-        
-        // 颜色计算简化
-        const hue = (nextRad / TAU * 360 + tick) % 360;
-        const color = `hsl(${hue}, ${excitement * 100}%, ${20 + excitement * 50}%)`;
+    <div class="copyright">Copyright © 2025 晓楠瓜. All Rights Reserved.</div>
 
-        // 绘制线条
-        ctx.strokeStyle = color;
-        ctx.lineWidth = excitement + 0.2;
-        ctx.beginPath();
-        ctx.moveTo(this.prevX, this.prevY);
-        
-        // 新位置计算
-        this.prevX = nextLen * Math.cos(nextRad) + (Math.random() - 0.5) * opts.randomJig * (1 - excitement);
-        this.prevY = nextLen * Math.sin(nextRad) + (Math.random() - 0.5) * opts.randomJig * (1 - excitement);
-        
-        ctx.lineTo(this.prevX, this.prevY);
-        ctx.stroke();
-    }
+    <!-- 动态线条背景代码 -->
+    <script>
+        const c = document.getElementById('c');
+        const ctx = c.getContext('2d');
+        let w = c.width = window.innerWidth;
+        let h = c.height = window.innerHeight;
+        let tick = 0;
+        const TAU = Math.PI * 2;
+        const vertices = [];
 
-    // 生成顶点网格
-    static gen() {
-        vertices.length = 0;
-        const hexCos = Math.cos(TAU / 12) * opts.hexLength;
-        const hexSin = Math.sin(TAU / 12) * opts.hexLength;
-        let alternanceX = false;
+        const opts = {
+            hexLength: 30,
+            timeStep: 0.01,
+            randomJig: 8,
+            repaintColor: 'rgba(0,0,0,0.1)'
+        };
 
-        for (let x = 0; x < w; x += hexCos) {
-            alternanceX = !alternanceX;
-            let alternance = alternanceX;
-            for (let y = 0; y < h; y += hexSin + opts.hexLength) {
-                alternance = !alternance;
-                const vx = x - w / 2;
-                const vy = y + (alternance ? hexSin : 0) - h / 2;
-                vertices.push(new Vertex(vx, vy));
+        class Vertex {
+            constructor(x, y) {
+                this.len = Math.sqrt(x * x + y * y);
+                this.rad = Math.acos(x / this.len) * (y > 0 ? 1 : -1) + 0.13;
+                this.prevX = x;
+                this.prevY = y;
+            }
+
+            step() {
+                const prop = this.len / opts.hexLength / 10 - tick;
+                const excitement = Math.sin(prop) ** 2;
+                const nextLen = this.len + Math.sin(tick);
+                const nextRad = this.rad + (excitement + prop) * 0.5;
+                
+                const hue = (nextRad / TAU * 360 + tick) % 360;
+                const color = `hsl(${hue}, ${excitement * 100}%, ${20 + excitement * 50}%)`;
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = excitement + 0.2;
+                ctx.beginPath();
+                ctx.moveTo(this.prevX, this.prevY);
+                
+                this.prevX = nextLen * Math.cos(nextRad) + (Math.random() - 0.5) * opts.randomJig * (1 - excitement);
+                this.prevY = nextLen * Math.sin(nextRad) + (Math.random() - 0.5) * opts.randomJig * (1 - excitement);
+                
+                ctx.lineTo(this.prevX, this.prevY);
+                ctx.stroke();
+            }
+
+            static gen() {
+                vertices.length = 0;
+                const hexCos = Math.cos(TAU / 12) * opts.hexLength;
+                const hexSin = Math.sin(TAU / 12) * opts.hexLength;
+                let alternanceX = false;
+
+                for (let x = 0; x < w; x += hexCos) {
+                    alternanceX = !alternanceX;
+                    let alternance = alternanceX;
+                    for (let y = 0; y < h; y += hexSin + opts.hexLength) {
+                        alternance = !alternance;
+                        const vx = x - w / 2;
+                        const vy = y + (alternance ? hexSin : 0) - h / 2;
+                        vertices.push(new Vertex(vx, vy));
+                    }
+                }
             }
         }
-    }
-}
 
-// 初始化
-Vertex.gen();
-ctx.fillRect(0, 0, w, h);
+        Vertex.gen();
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
 
-// 动画循环
-function anim() {
-    requestAnimationFrame(anim);
-    tick += opts.timeStep;
+        function anim() {
+            requestAnimationFrame(anim);
+            tick += opts.timeStep;
 
-    // 清屏（保留拖影）
-    ctx.fillStyle = opts.repaintColor;
-    ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = opts.repaintColor;
+            ctx.fillRect(0, 0, w, h);
 
-    // 画布居中
-    ctx.save();
-    ctx.translate(w / 2, h / 2);
-    vertices.forEach(v => v.step());
-    ctx.restore();
-}
-anim();
+            ctx.save();
+            ctx.translate(w / 2, h / 2);
+            vertices.forEach(v => v.step());
+            ctx.restore();
+        }
+        anim();
 
-// 窗口适配
-window.addEventListener('resize', () => {
-    w = c.width = window.innerWidth;
-    h = c.height = window.innerHeight;
-    Vertex.gen();
-    ctx.fillStyle = '#222';
-    ctx.fillRect(0, 0, w, h);
-});
-</script>
+        window.addEventListener('resize', () => {
+            w = c.width = window.innerWidth;
+            h = c.height = window.innerHeight;
+            Vertex.gen();
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+        });
+    </script>
+
+    <!-- 天气预报代码 -->
+    <script>
+        const API_HOST = 'devapi.qweather.com';
+        const API_KEY = '05beb2ec0f884c25b8084d6749f37a36';
+
+        const weatherCity = document.getElementById("weather-city");
+        const weatherInfo = document.getElementById("weather-info");
+        const weatherTemp = document.getElementById("weather-temp");
+        const weatherIcon = document.getElementById("weather-icon");
+        const citySelect = document.getElementById("city-select");
+
+        async function fetchWeather(locationId) {
+            try {
+                const url = `https://${API_HOST}/v7/weather/now?location=${locationId}&key=${API_KEY}&lang=zh`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const now = data.now;
+                const cityName = citySelect.options[citySelect.selectedIndex].text;
+                weatherCity.textContent = `城市: ${cityName}`;
+                weatherInfo.textContent = `天气: ${now.text}`;
+                weatherTemp.textContent = `温度: ${now.temp}°C`;
+                weatherIcon.src = `https://cdn.qweather.com/icons/${now.icon}.png`;
+                weatherIcon.alt = now.text;
+            } catch (err) {
+                console.error(err);
+                weatherCity.textContent = "城市: 获取失败";
+                weatherInfo.textContent = "天气: 获取失败";
+                weatherTemp.textContent = "温度: 获取失败";
+                weatherIcon.src = "";
+            }
+        }
+
+        fetchWeather(citySelect.value);
+        citySelect.addEventListener("change", () => fetchWeather(citySelect.value));
+    </script>
 </body>
 </html>
