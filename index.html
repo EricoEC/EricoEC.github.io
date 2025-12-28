@@ -20,7 +20,6 @@
             padding: 20px;
             margin: 0;
             cursor: default; /* 消除文本选中光标，不影响点击 */
-            /* 移除 touch-action: none，允许页面滚动 */
         }
         /* 标题样式（可选，居中显示） */
         h1 { margin-bottom: 25px; font-size: 28px; text-shadow: 0 0 8px rgba(0,0,0,0.5); }
@@ -278,16 +277,17 @@
         citySelect.addEventListener("change", () => fetchWeather(citySelect.value));
     </script>
 
-    <!-- 支持多指点击+长按滑动特效+页面滚动兼容的动画代码 -->
+    <!-- 修复版：单次1个形状+滑动连贯的动画代码 -->
     <script>
         ! function(e, t, a) {
-            let isDragging = false; // 标记是否处于滑动特效状态
-            let isLongPress = false; // 标记是否长按（触发特效的前提）
+            let isDragging = false; // 滑动特效状态
+            let isLongPress = false; // 长按状态
             let pressTimer = null; // 长按计时器
-            const shapeDensity = 8; // 滑动时形状密度
-            const maxShapeCount = 150; // 最大形状数量（调整为150）
-            const longPressDelay = 300; // 长按触发时间（300毫秒，可调整）
-            var s = []; // 存储所有形状元素
+            let lastShapePos = { x: -100, y: -100 }; // 上一个形状位置（防粘连）
+            const shapeSpacing = 15; // 滑动时形状间距（15px，不粘连不疏远）
+            const maxShapeCount = 150; // 最大形状数量
+            const longPressDelay = 300; // 长按触发时间（300ms）
+            var s = []; // 存储形状元素
 
             // 动画循环（清理透明元素）
             function r() {
@@ -298,76 +298,97 @@
                 requestAnimationFrame(r)
             }
 
-            // 单指点击（PC/手机）
+            // 单次点击（仅生成1个形状）
             function n() {
                 t.addEventListener('click', function(e) {
-                    if (!isDragging) addShape(e.clientX, e.clientY);
+                    if (!isDragging) addShape(e.clientX, e.clientY, true); // 点击标记：强制生成1个
                 });
             }
 
-            // 移动端：触摸开始（判断长按/点击）
+            // 移动端触摸开始（长按判断）
             function i() {
                 t.addEventListener('touchstart', function(e) {
                     const touch = e.touches[0];
-                    // 启动长按计时器
                     pressTimer = setTimeout(() => {
                         isLongPress = true;
                         isDragging = true;
-                        addShape(touch.clientX, touch.clientY); // 长按后生成第一个形状
+                        addShape(touch.clientX, touch.clientY, true); // 长按初始形状
+                        lastShapePos = { x: touch.clientX, y: touch.clientY }; // 记录初始位置
                     }, longPressDelay);
-                }, { passive: true }); // passive:true 允许页面滚动
+                }, { passive: true });
             }
 
-            // 移动端：触摸移动（区分长按滑动/正常滚动）
+            // 移动端触摸移动（按间距生成形状，连贯不粘连）
             function d() {
                 t.addEventListener('touchmove', function(e) {
-                    if (!isLongPress) return; // 未长按，不触发特效（允许滚动）
-                    e.preventDefault(); // 长按滑动时，阻止滚动（避免冲突）
+                    if (!isLongPress) return;
+                    e.preventDefault();
                     const touch = e.touches[0];
-                    const random = Math.floor(Math.random() * shapeDensity);
-                    if (random === 0) addShape(touch.clientX, touch.clientY);
+                    // 计算当前位置与上一个形状的距离
+                    const distance = Math.sqrt(
+                        Math.pow(touch.clientX - lastShapePos.x, 2) + 
+                        Math.pow(touch.clientY - lastShapePos.y, 2)
+                    );
+                    // 距离达到间距才生成新形状
+                    if (distance >= shapeSpacing) {
+                        addShape(touch.clientX, touch.clientY, false);
+                        lastShapePos = { x: touch.clientX, y: touch.clientY }; // 更新上一个位置
+                    }
                 }, { passive: false });
             }
 
-            // 移动端：触摸结束（重置状态）
+            // 移动端触摸结束（重置状态）
             function l() {
                 t.addEventListener('touchend', function() {
-                    clearTimeout(pressTimer); // 清除计时器
+                    clearTimeout(pressTimer);
                     isLongPress = false;
                     isDragging = false;
+                    lastShapePos = { x: -100, y: -100 }; // 重置位置
                 });
                 t.addEventListener('touchcancel', function() {
                     clearTimeout(pressTimer);
                     isLongPress = false;
                     isDragging = false;
+                    lastShapePos = { x: -100, y: -100 };
                 });
             }
 
-            // PC端：鼠标滑动（按住拖动触发特效）
+            // PC端鼠标滑动（按间距生成）
             function m() {
                 t.addEventListener('mousedown', function(e) {
                     isDragging = true;
-                    addShape(e.clientX, e.clientY);
+                    addShape(e.clientX, e.clientY, true);
+                    lastShapePos = { x: e.clientX, y: e.clientY };
                 });
                 t.addEventListener('mousemove', function(e) {
                     if (!isDragging) return;
-                    const random = Math.floor(Math.random() * shapeDensity);
-                    if (random === 0) addShape(e.clientX, e.clientY);
+                    const distance = Math.sqrt(
+                        Math.pow(e.clientX - lastShapePos.x, 2) + 
+                        Math.pow(e.clientY - lastShapePos.y, 2)
+                    );
+                    if (distance >= shapeSpacing) {
+                        addShape(e.clientX, e.clientY, false);
+                        lastShapePos = { x: e.clientX, y: e.clientY };
+                    }
                 });
                 t.addEventListener('mouseup', function() {
                     isDragging = false;
+                    lastShapePos = { x: -100, y: -100 };
                 });
                 t.addEventListener('mouseleave', function() {
                     isDragging = false;
+                    lastShapePos = { x: -100, y: -100 };
                 });
             }
 
-            // 生成形状（数量限制：先进先出）
-            function addShape(x, y) {
+            // 生成形状（核心修复：单次点击仅1个，滑动按间距）
+            function addShape(x, y, isClick) {
+                // 数量限制：先进先出
                 if (s.length >= maxShapeCount) {
                     const oldestShape = s.shift();
                     t.body.removeChild(oldestShape.el);
                 }
+                // 仅随机一次，确保1个位置只出1个形状
                 const shapeType = Math.random() > 0.5 ? 'heart' : 'star';
                 var a = t.createElement("div");
                 a.className = shapeType;
