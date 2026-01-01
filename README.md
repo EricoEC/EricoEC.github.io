@@ -1,5 +1,8 @@
 ## Hi there 👋
 
+欢迎来到我的主页
+
+持续施工升级中～
 <!--
 **EricoEC/EricoEC** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
