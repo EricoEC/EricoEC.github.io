@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>2026新年烟花</title>
+    <link rel="icon" type="image/x-icon" href="icon/favicon-f.ico">
+    <link rel="stylesheet" href="documents/sweetalert2.min.css">
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #161929;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+        }
+        audio {
+            opacity: 0;
+        }
+       .message {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            width: 160px;
+            background-color: rgba(0, 0, 0, 0.52);
+            padding: 0px 17px;
+            top: 25px;
+            border-radius: 6px;
+            overflow: hidden;
+            z-index: 1000;
+            opacity: 0;
+        }
+       .message p {
+            line-height: 1;
+            font-size: 14px;
+            color: #ffffff;
+        }
+       .spark {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            position: absolute;
+            background-color: rgba(231, 200, 160, 0.8);
+            box-shadow: 0 0 40px 0 rgba(231, 200, 160, 0.8);
+            animation: glow 5s infinite;
+        }
+       .medium-spark {
+            width: 7px;
+            height: 7px;
+        }
+       .big-spark {
+            width: 10px;
+            height: 10px;
+            box-shadow: 0 0 40px 0 #e9c9a0, 0 0 20px 0 #FFFFFF, inset 0 0 4px #FFFFFF;
+        }
+       .meteor {
+            width: 6px;
+            height: 6px;
+            background-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 0 40px 0 #e9c9a0, 0 0 20px 0 #FFFFFF, inset 0 0 8px rgba(255, 255, 255, 0.6);
+            top: 0;
+            left: 80%;
+            opacity: 0.3;
+            transform: rotate(-45deg) translate(0, -50px);
+            animation: meteor 7s infinite;
+        }
+       .meteor:after {
+            content: '';
+            width: 20vw;
+            height: 6px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(231, 200, 160, 0.4);
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        @keyframes glow {
+            0% {
+                opacity: 0.9;
+            }
+            50% {
+                opacity: 0.2;
+            }
+            100% {
+                opacity: 0.9;
+            }
+        }
+        @keyframes meteor {
+            0% {
+                transform: rotate(-45deg) translateX(0);
+                opacity: 0.3;
+            }
+            10% {
+                opacity: 1;
+            }
+            20% {
+                transform: rotate(-45deg) translateX(-100vw);
+                opacity: 0;
+            }
+            100% {
+                transform: rotate(-45deg) translateX(-100vw);
+                opacity: 0;
+            }
+        }
+        /* ========== 原有样式完全保留 ========== */
+        body.hidden-all-ui .back-home,
+        body.hidden-all-ui .control-btn-group,
+        body.hidden-all-ui .countdown-layer,
+        body.hidden-all-ui #pipVideoIOS,
+        body.hidden-all-ui .video-container {
+            display: none !important;
+        }
+        .back-home {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 99999;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            border: 1px solid #ffc107;
+            color: #fff;
+            text-decoration: none;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+        .back-home:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+        }
+        .control-btn-group {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 99999;
+            display: flex;
+            gap: 10px; /* 保持原有按钮间距 */
+        }
+        .control-btn {
+            padding: 10px 16px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            border: 1px solid #ffc107;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+        .control-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+        }
+        .countdown-layer {
+            position: fixed;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            border: 1px solid transparent;
+            background-clip: padding-box, border-box;
+            background-origin: padding-box, border-box;
+        }
+        .countdown-layer.full-screen {
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), 
+                              linear-gradient(45deg, #d92121, #ffc107);
+            background-size: 400% 400%;
+            animation: bgFestive 15s ease infinite;
+        }
+        @keyframes bgFestive {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .countdown-layer.small-window {
+            bottom: 20px;
+            left: 20px;
+            top: auto;
+            width: auto;
+            height: auto;
+            background-image: linear-gradient(transparent, transparent), 
+                              linear-gradient(45deg, rgba(217,33,33,0.6), rgba(255,193,7,0.6));
+        }
+        .layer-time-number.red-text {
+            color: #ff3b30 !important;
+            text-shadow: 0 0 10px rgba(255, 59, 48, 0.8);
+        }
+        .countdown-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .countdown-layer.small-window .countdown-content {
+            gap: 8px;
+        }
+        .layer-title {
+            font-size: 2rem;
+            text-shadow: 0 0 20px rgba(255, 193, 7, 0.8);
+            color: #ffc107;
+        }
+        .countdown-layer.small-window .layer-title {
+            font-size: 1.2rem;
+        }
+        .layer-time-container {
+            display: flex;
+            gap: 1rem;
+        }
+        .countdown-layer.small-window .layer-time-container {
+            gap: 0.5rem;
+        }
+        .layer-time-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .layer-time-number {
+            font-size: 3rem;
+            font-weight: 700;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            border: 1px solid #ffc107;
+            color: #fff;
+        }
+        .countdown-layer.small-window .layer-time-number {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            background: rgba(0,0,0,0.2);
+        }
+        .layer-time-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #ffecb3;
+        }
+        .countdown-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10000;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.45);
+            border: 1px solid rgba(255,193,7,0.9);
+            color: #fff;
+            cursor: pointer;
+            user-select: none;
+            font-size: 22px;
+            transition: transform 0.18s ease, background 0.18s;
+            backdrop-filter: blur(4px);
+        }
+        .countdown-arrow:hover { transform: translateY(-50%) scale(1.06); background: rgba(0,0,0,0.6); }
+        .countdown-arrow.left { left: -22px; }
+        .countdown-arrow.right { right: -22px; }
+        /* ========== 恢复视频容器显示（不隐藏） ========== */
+        .video-container {
+            width: 100%;
+            max-width: 320px;
+            height: 240px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #6c63ff;
+            box-shadow: 0 0 20px rgba(108, 99, 255, 0.5);
+            background-color: #000;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: -1; /* 仅修改此处：从9998改为-1，隐藏到所有图层后面 */
+        }
+        #pipVideoIOS {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        #countdownCanvasIOS {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .control-btn-group {
+                flex-direction: column;
+                top: 20px;
+                right: 20px;
+            }
+            .layer-time-number {
+                font-size: 2rem;
+                width: 60px;
+                height: 60px;
+            }
+            .countdown-layer.small-window .layer-time-number {
+                font-size: 1.2rem;
+                width: 35px;
+                height: 35px;
+            }
+            .countdown-arrow { width: 36px; height: 36px; font-size: 18px; }
+            .countdown-arrow.left { left: -18px; }
+            .countdown-arrow.right { right: -18px; }
+        }
+    </style>
+</head>
+<body onselectstart="return false">
+    <div id="backgroundRendering" style="z-index: 0;"></div>
+    <canvas id="fireworks" style="z-index: 9999;">
+    </canvas>
+    <audio id="bgm" src="music/music-f.mp3" loop>
+    </audio>
+    <!-- 保留DOM，正常显示 -->
+    <canvas id="countdownCanvasIOS" width="320" height="240"></canvas>
+    <div class="video-container">
+        <video id="pipVideoIOS" controls playsinline muted loop></video>
+    </div>
+    <!-- 原有DOM完全保留 -->
+    <div style="display: none">
+        <div class="shape">🏮2026新年快乐🏮</div>
+        <div class="shape">🏮恭喜发财🏮</div>
+        <div class="shape">🏮万事如意🏮</div>
+        <div class="shape">🏮吉庆有余🏮</div>
+        <div class="shape">🏮心想事成🏮</div>
+        <div class="shape">🏮喜气盈门🏮</div>
+        <div class="shape">🏮阖家欢乐🏮</div>
+        <div class="shape">🏮财源广进🏮</div>
+    </div>
+    <a href="https://ericoec.github.io" class="back-home" target="_self">← 主页</a>
+    <div class="control-btn-group">
+        <!-- 三个按钮完全保留 -->
+        <button class="control-btn" id="pipBtn">画中画</button>
+        <button class="control-btn" id="fullscreenBtn">全屏倒计时</button>
+        <button class="control-btn" id="hideUiBtn">隐藏UI</button>
+    </div>
+    <div class="countdown-layer small-window" id="countdownLayer">
+        <div class="countdown-arrow left" id="arrowLeft">‹</div>
+        <div class="countdown-arrow right" id="arrowRight">›</div>
+        <div class="countdown-content">
+            <h2 class="layer-title" id="layerTitle">距离2026年元旦还有</h2>
+            <div class="layer-time-container">
+                <div class="layer-time-unit">
+                    <div class="layer-time-number" id="layerDays">00</div>
+                    <div class="layer-time-label">天</div>
+                </div>
+                <div class="layer-time-unit">
+                    <div class="layer-time-number" id="layerHours">00</div>
+                    <div class="layer-time-label">时</div>
+                </div>
+                <div class="layer-time-unit">
+                    <div class="layer-time-number" id="layerMinutes">00</div>
+                    <div class="layer-time-label">分</div>
+                </div>
+                <div class="layer-time-unit">
+                    <div class="layer-time-number" id="layerSeconds">00</div>
+                    <div class="layer-time-label">秒</div>
+                </div>
+                <div class="layer-time-unit">
+                    <div class="layer-time-number" id="layerMilliseconds">000</div>
+                    <div class="layer-time-label">微秒</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="documents/sweetalert2.all.min.js"></script>
+    <script>
+        console.error = function() {};
+        console.warn = function() {};
+        console.info = function() {};
+        console.debug = function() {};
+        console.table = function() {};
+        console.dir = function() {};
+        console.trace = function() {};
+        console.group = function() {};
+        console.groupEnd = function() {};
+        console.groupCollapsed = function() {};
+        console.time = function() {};
+        console.timeEnd = function() {};
+        console.count = function() {};
+        console.clear = function() {};
+        console.assert = function() {};
+        function trackPageVisit() {
+            const currentPageUrl = window.location.href;
+            const trackerUrl = 'https://mail.m-code.top/';
+            const fullTrackerUrl = `${trackerUrl}?url=${encodeURIComponent(currentPageUrl)}`;
+            var iframe = document.createElement('iframe');
+            iframe.src = fullTrackerUrl;
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+        }
+        function setupTracking() {
+            if (document.readyState === 'complete') {
+                setTimeout(trackPageVisit, 1000);
+            } else {
+                window.addEventListener('load', () => {
+                    setTimeout(trackPageVisit, 1000);
+                });
+            }
+        }
+        
+        setupTracking();
+        
+        const iconUrls = [
+            "icon/favicon-f.ico",
+            "icon/favicon-f.png",
+            "icon/favicon-f2.png",
+        ];
+        let currentIconIndex = 0;
+        setInterval(() => {
+            const link = document.querySelector('link[rel="icon"]');
+            link.href = iconUrls[currentIconIndex];
+            currentIconIndex = (currentIconIndex + 1) % iconUrls.length;
+        }, 5000);
+        var wH = window.innerHeight;
+        var wW = window.innerWidth;
+        let backgroundRendering = document.getElementById("backgroundRendering");
+        var generateStars = function generateStars(f) {
+            for (var e = 0; e < f; e++) {
+                var single = document.createElement("div");
+                single.className = e % 20 == 0? "spark big-spark" : e % 9 == 0? "spark medium-spark" : "star";
+                single.setAttribute("style", "top:" + Math.round(Math.random() * wH) + "px;left:" + Math.round(Math.random() * wW) + "px;animation-duration:" + (Math.round(Math.random() * 3000) + 3000) + "ms;animation-delay:" + Math.round(Math.random() * 3000) + "ms;");
+                backgroundRendering.appendChild(single);
+            }
+        };
+        generateStars(getRandom(140, 240));
+        let fireworksCanvas = document.getElementById("fireworks");
+        let currentFireworks = document.createElement("canvas");
+        let currentObject = currentFireworks.getContext("2d");
+        let fireworksObject = fireworksCanvas.getContext("2d");
+        currentFireworks.width = fireworksCanvas.width = window.innerWidth;
+        currentFireworks.height = fireworksCanvas.height = window.innerHeight;
+        let fireworksExplosion = [];
+        let autoPlayFlag = false;
+        window.addEventListener('load', () => {
+            Swal.fire({
+                title: '您想要播放背景音乐吗?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes',
+                cancelButtonText: 'No',
+            }).then((result) => {
+                drawFireworks();
+                lastTime = new Date();
+                animationEffect();
+                if (result.isConfirmed) {
+                    let audio = document.getElementById('bgm');
+                    audio.play();
+                    document.querySelector("body").onclick = function () {
+                        if (!autoPlayFlag) {
+                            let audio = document.getElementById('bgm');
+                            audio.play();
+                            autoPlayFlag = true;
+                        }
+                    };
+                }
+                for (let i = 0; i <= 10; i++) {
+                    setTimeout(function () {
+                        document.querySelector("body > div.message").style.opacity = i / 10;
+                    }, i * 60 + 2000);
+                }
+                for (let i = 0; i <= 10; i++) {
+                    setTimeout(function () {
+                        document.querySelector("body > div.message").style.opacity = 1 - i / 10;
+                        if (i === 10) {
+                            document.querySelector("body > div.message > p").innerHTML = "";
+                        }
+                    }, i * 60 + 8000);
+                }
+                for (let i = 0; i <= 10; i++) {
+                    setTimeout(function () {
+                        document.querySelector("body > div.message").style.opacity = i / 10;
+                    }, i * 60 + 8600);
+                }
+                for (let i = 0; i <= 10; i++) {
+                    setTimeout(function () {
+                        document.querySelector("body > div.message").style.opacity = 1 - i / 10;
+                    }, i * 60 + 16600);
+                }
+            });
+        });
+        let lastTime;
+        function animationEffect() {
+            fireworksObject.save();
+            fireworksObject.fillStyle = "rgba(0,5,25,0.1)";
+            fireworksObject.fillRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+            fireworksObject.restore();
+            let newTime = new Date();
+            if (newTime - lastTime > getRandom(10, 1600) + (window.innerHeight - 767) / 2) {
+                let random = Math.random() * 100 > 15;
+                let x = getRandom(0, (fireworksCanvas.width));
+                let y = getRandom(0, 400);
+                if (random) {
+                    let bigExplode = new explode(
+                        getRandom(0, fireworksCanvas.width),
+                        getRandom(1, 3),
+                        "#FFF",
+                        {
+                            x: x,
+                            y: y,
+                        }
+                    );
+                    fireworksExplosion.push(bigExplode);
+                } else {
+                    let x = getRandom(fireworksCanvas.width / 2 - 300, fireworksCanvas.width / 2 + 300);
+                    let y = getRandom(0, 350);
+                    let bigExplode = new explode(
+                        getRandom(0, fireworksCanvas.width),
+                        getRandom(1, 3),
+                        "#FFF",
+                        {
+                            x: x,
+                            y: y,
+                        },
+                        document.querySelectorAll(".shape")[
+                            parseInt(getRandom(0, document.querySelectorAll(".shape").length))
+                            ]
+                    );
+                    fireworksExplosion.push(bigExplode);
+                }
+                lastTime = newTime;
+            }
+            sparks.foreach(function () {
+                this.paint();
+            });
+            fireworksExplosion.foreach(function () {
+                let that = this;
+                if (!this.dead) {
+                    this._move();
+                    this._drawLight();
+                } else {
+                    this.explodes.foreach(function (index) {
+                        if (!this.dead) {
+                            this.moveTo();
+                        } else {
+                            if (index === that.explodes.length - 1) {
+                                fireworksExplosion[fireworksExplosion.indexOf(that)] = null;
+                            }
+                        }
+                    });
+                }
+            });
+            setTimeout(animationEffect, 16);
+        }
+        Array.prototype.foreach = function (callback) {
+            for (let i = 0; i < this.length; i++) {
+                if (this[i]!== null) {
+                    callback.apply(this[i], [i]);
+                }
+            }
+        };
+        fireworksCanvas.onclick = function (evt) {
+            let x = evt.clientX;
+            let y = evt.clientY;
+            let explode1 = new explode(
+                getRandom(fireworksCanvas.width / 3, (fireworksCanvas.width * 2) / 3),
+                2,
+                "#FFF",
+                {
+                    x: x,
+                    y: y,
+                }
+            );
+            fireworksExplosion.push(explode1);
+        };
+        let explode = function (x, r, c, explodeArea, shape) {
+            this.explodes = [];
+            this.x = x;
+            this.y = fireworksCanvas.height + r;
+            this.r = r;
+            this.c = c;
+            this.shape = shape || false;
+            this.explodeArea = explodeArea;
+            this.dead = false;
+            this.ba = parseInt(getRandom(80, 200));
+        };
+        explode.prototype = {
+            _paint: function () {
+                fireworksObject.save();
+                fireworksObject.beginPath();
+                fireworksObject.arc(this.x, this.y, this.r, 0, 2 * Math.PI);
+                fireworksObject.fillStyle = this.c;
+                fireworksObject.fill();
+                fireworksObject.restore();
+            },
+            _move: function () {
+                let dx = this.explodeArea.x - this.x,
+                    dy = this.explodeArea.y - this.y;
+                this.x = this.x + dx * 0.01;
+                this.y = this.y + dy * 0.01;
+                if (Math.abs(dx) <= this.ba && Math.abs(dy) <= this.ba) {
+                    if (this.shape) {
+                        this._shapeExplode();
+                    } else {
+                        this._explode();
+                    }
+                    this.dead = true;
+                } else {
+                    this._paint();
+                }
+            },
+            _drawLight: function () {
+                fireworksObject.save();
+                fireworksObject.fillStyle = "rgba(255,228,150,0.3)";
+                fireworksObject.beginPath();
+                fireworksObject.arc(this.x, this.y, this.r + 3 * Math.random() + 1, 0, 2 * Math.PI);
+                fireworksObject.fill();
+                fireworksObject.restore();
+            },
+            _explode: function () {
+                let embellishmentNum = getRandom(30, 200);
+                let style = getRandom(0, 10) >= 5? 1 : 2;
+                let color;
+                if (style === 1) {
+                    color = {
+                        a: parseInt(getRandom(128, 255)),
+                        b: parseInt(getRandom(128, 255)),
+                        c: parseInt(getRandom(128, 255)),
+                    };
+                }
+                let fullRange = parseInt(getRandom(300, 400));
+                for (let i = 0; i < embellishmentNum; i++) {
+                    if (style === 2) {
+                        color = {
+                            a: parseInt(getRandom(128, 255)),
+                            b: parseInt(getRandom(128, 255)),
+                            c: parseInt(getRandom(128, 255)),
+                        };
+                    }
+                    let a = getRandom(-Math.PI, Math.PI);
+                    let x = getRandom(0, fullRange) * Math.cos(a) + this.x;
+                    let y = getRandom(0, fullRange) * Math.sin(a) + this.y;
+                    let radius = getRandom(0, 2);
+                    let embellishment = new newEmbellishment(this.x, this.y, radius, color, x, y);
+                    this.explodes.push(embellishment);
+                }
+            },
+            _shapeExplode: function () {
+                let that = this;
+                putValue(currentFireworks, currentObject, this.shape, 5, function (dots) {
+                    let dx = fireworksCanvas.width / 2 - that.x;
+                    let dy = fireworksCanvas.height / 2 - that.y;
+                    let color;
+                    for (let i = 0; i < dots.length; i++) {
+                        color = {
+                            a: dots[i].a,
+                            b: dots[i].b,
+                            c: dots[i].c,
+                        };
+                        let x = dots[i].x;
+                        let y = dots[i].y;
+                        let radius = 1;
+                        let embellishment = new newEmbellishment(that.x, that.y, radius, color, x - dx, y - dy);
+                        that.explodes.push(embellishment);
+                    }
+                });
+            },
+        };
+        function putValue(fireworks, context, ele, dr, callback) {
+            context.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+            let img = new Image();
+            let dots;
+            if (ele.innerHTML.indexOf("img") >= 0) {
+                img.src = ele.getElementsByTagName("img")[0].src;
+                implode(img, function () {
+                    context.drawImage(
+                        img,
+                        fireworksCanvas.width / 2 - img.width / 2,
+                        fireworksCanvas.height / 2 - img.width / 2
+                    );
+                    let dots = gettingData(fireworks, context, dr);
+                    callback(dots);
+                });
+            } else {
+                let text = ele.innerHTML;
+                context.save();
+                let fontSize = getRandom(3, 11);
+                context.font = fontSize + "vw bold";
+                context.textAlign = "center";
+                context.textBaseline = "middle";
+                context.fillStyle =
+                    "rgba(" +
+                    parseInt(getRandom(128, 255)) +
+                    "," +
+                    parseInt(getRandom(128, 255)) +
+                    "," +
+                    parseInt(getRandom(128, 255)) +
+                    " , 1)";
+                context.fillText(text, fireworksCanvas.width / 2, fireworksCanvas.height / 2);
+                context.restore();
+                dots = gettingData(fireworks, context, dr);
+                callback(dots);
+            }
+        }
+        function implode(img, callback) {
+            if (img.complete) {
+                callback.call(img);
+            } else {
+                img.onload = function () {
+                    callback.call(this);
+                };
+            }
+        }
+        function gettingData(fireworks, context, dr) {
+            let imgData = context.getImageData(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+            context.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+            let dots = [];
+            for (let x = 0; x < imgData.width; x += dr) {
+                for (let y = 0; y < imgData.height; y += dr) {
+                    let i = (y * imgData.width + x) * 4;
+                    if (imgData.data[i + 3] > 128) {
+                        let dot = {
+                            x: x,
+                            y: y,
+                            a: imgData.data[i],
+                            b: imgData.data[i + 1],
+                            c: imgData.data[i + 2],
+                        };
+                        dots.push(dot);
+                    }
+                }
+            }
+            return dots;
+        }
+        function getRandom(a, b) {
+            return Math.random() * (b - a) + a;
+        }
+        let maxRadius = 1,
+            sparks = [];
+        function drawFireworks() {
+            for (let i = 0; i < 100; i++) {
+                let spark = new newSpark();
+                sparks.push(spark);
+                spark.paint();
+            }
+        }
+        let newSpark = function () {
+            this.x = Math.random() * fireworksCanvas.width;
+            this.y = Math.random() * 2 * Math.random() * fireworksCanvas.height - fireworksCanvas.height;
+            this.r = Math.random() * maxRadius;
+        };
+        newSpark.prototype = {
+            paint: function () {
+                fireworksObject.save();
+                fireworksObject.beginPath();
+                fireworksObject.arc(this.x, this.y, this.r, 0, 2 * Math.PI);
+                fireworksObject.fillStyle = "rgba(255,255,255," + this.r + ")";
+                fireworksObject.fill();
+                fireworksObject.restore();
+            },
+        };
+        let newEmbellishment = function (centerX, centerY, radius, color, tx, ty) {
+            this.tx = tx;
+            this.ty = ty;
+            this.x = centerX;
+            this.y = centerY;
+            this.dead = false;
+            this.radius = radius;
+            this.color = color;
+        };
+        newEmbellishment.prototype = {
+            paint: function () {
+                fireworksObject.save();
+                fireworksObject.beginPath();
+                fireworksObject.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+                fireworksObject.fillStyle =
+                    "rgba(" + this.color.a + "," + this.color.b + "," + this.color.c + ",1)";
+                fireworksObject.fill();
+                fireworksObject.restore();
+            },
+            moveTo: function () {
+                this.ty = this.ty + 0.3;
+                let dx = this.tx - this.x,
+                    dy = this.ty - this.y;
+                this.x = Math.abs(dx) < 0.1 ? this.tx : this.x + dx * 0.1;
+                this.y = Math.abs(dy) < 0.1 ? this.ty : this.y + dy * 0.1;
+                if (dx === 0 && Math.abs(dy) <= 80) {
+                    this.dead = true;
+                }
+                this.paint();
+            },
+        };
+        // ========== 原有倒计时核心逻辑（完全保留） ==========
+        const targets = {
+            newYear: new Date('2026-01-01T00:00:00').getTime(),
+            springFestival: new Date('2026-02-17T00:00:00').getTime()
+        };
+        const now0 = Date.now();
+        let activeKey = (targets.newYear - now0) > 0 ? 'newYear' : 'springFestival';
+        let targetDate = targets[activeKey];
+        const countdownLayer = document.getElementById('countdownLayer');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const hideUiBtn = document.getElementById('hideUiBtn');
+        const arrowLeft = document.getElementById('arrowLeft');
+        const arrowRight = document.getElementById('arrowRight');
+        const layerTitleEl = document.getElementById('layerTitle');
+        const fiveMinutes = 10 * 60 * 1000;
+        const timeNumberEls = document.querySelectorAll('.layer-time-number');
+        let userManualSwitch = false;
+        function updateTitleByKey(key) {
+            if (key === 'newYear') {
+                layerTitleEl.innerText = '距离2026年元旦还有';
+            } else if (key === 'springFestival') {
+                layerTitleEl.innerText = '距离2026年春节还有';
+            }
+        }
+        function setActive(key) {
+            if (!targets[key]) return;
+            activeKey = key;
+            targetDate = targets[activeKey];
+            updateTitleByKey(activeKey);
+        }
+        fullscreenBtn.addEventListener('click', function() {
+            if (countdownLayer.classList.contains('full-screen')) {
+                countdownLayer.className = 'countdown-layer small-window';
+                fullscreenBtn.textContent = '全屏倒计时';
+            } else {
+                countdownLayer.className = 'countdown-layer full-screen';
+                fullscreenBtn.textContent = '退出全屏';
+            }
+        });
+        hideUiBtn.addEventListener('click', function() {
+            document.body.classList.add('hidden-all-ui');
+            // 替换为SweetAlert2样式（info图标，统一按钮风格）
+            Swal.fire({
+                title: '提示',
+                text: '所有UI已隐藏，刷新网页可恢复',
+                icon: 'info',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: '确认'
+            });
+        });
+        arrowLeft.addEventListener('click', function () {
+            userManualSwitch = true;
+            const next = activeKey === 'newYear' ? 'springFestival' : 'newYear';
+            setActive(next);
+        });
+        arrowRight.addEventListener('click', function () {
+            userManualSwitch = true;
+            const next = activeKey === 'newYear' ? 'springFestival' : 'newYear';
+            setActive(next);
+        });
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const newYearDistance = targets.newYear - now;
+            if (newYearDistance <= 0 && !userManualSwitch && activeKey === 'newYear') {
+                setActive('springFestival');
+            }
+            let distance = targetDate - now;
+            if (distance < 0) {
+                distance = 0;
+                if (!updateCountdown._alertedKey || updateCountdown._alertedKey !== activeKey) {
+                    updateCountdown._alertedKey = activeKey;
+                    countdownLayer.className = 'countdown-layer full-screen';
+                    if (activeKey === 'newYear') {
+                        Swal.fire('🎉 倒计时结束！', '2026年元旦快乐！', 'success');
+                    } else if (activeKey === 'springFestival') {
+                        Swal.fire('🎉 倒计时结束！', '2026年春节快乐！', 'success');
+                    }
+                }
+            }
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            const milliseconds = Math.floor((distance % 1000));
+            const padZero = (num, length = 2) => num.toString().padStart(length, '0');
+            const daysText = padZero(days);
+            const hoursText = padZero(hours);
+            const minutesText = padZero(minutes);
+            const secondsText = padZero(seconds);
+            const millisecondsText = padZero(milliseconds, 3);
+            
+            document.getElementById('layerDays').innerText = daysText;
+            document.getElementById('layerHours').innerText = hoursText;
+            document.getElementById('layerMinutes').innerText = minutesText;
+            document.getElementById('layerSeconds').innerText = secondsText;
+            document.getElementById('layerMilliseconds').innerText = millisecondsText;
+            
+            if (distance > 0 && distance <= fiveMinutes) {
+                timeNumberEls.forEach(el => el.classList.add('red-text'));
+            } else {
+                timeNumberEls.forEach(el => el.classList.remove('red-text'));
+            }
+            
+            requestAnimationFrame(updateCountdown);
+        }
+        updateTitleByKey(activeKey);
+        updateCountdown();
+        // ========== 画中画核心修改：第一次点击就播放！ ==========
+        const canvasIOS = document.getElementById('countdownCanvasIOS');
+        const ctxIOS = canvasIOS.getContext('2d');
+        const videoIOS = document.getElementById('pipVideoIOS');
+        const pipBtn = document.getElementById('pipBtn');
+        let canvasStreamIOS = null;
+        let countdownTimerIOS = null;
+        let isStreamReady = false; // 标记是否第一次点击完成
+
+        const festivalConfig = {
+            newYear: {
+                date: new Date('2026-01-01T00:00:00').getTime(),
+                title: '2026 元旦倒计时'
+            },
+            springFestival: {
+                date: new Date('2026-02-17T00:00:00').getTime(),
+                title: '2026 春节倒计时'
+            }
+        };
+        let activeFestival = 'newYear';
+        let targetTime = festivalConfig[activeFestival].date;
+
+        function initCanvasStreamIOS() {
+            if (canvasStreamIOS) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+                try {
+                    canvasStreamIOS = canvasIOS.captureStream(30);
+                    videoIOS.srcObject = canvasStreamIOS;
+                    videoIOS.addEventListener('loadedmetadata', () => resolve());
+                    videoIOS.load();
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+
+        function calculateFestivalCountdown() {
+            const now = new Date().getTime();
+            let timeDiff = targetTime - now;
+            if (timeDiff < 0) {
+                activeFestival = activeFestival === 'newYear' ? 'springFestival' : 'newYear';
+                targetTime = festivalConfig[activeFestival].date;
+                timeDiff = targetTime - now;
+            }
+            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+            return {
+                title: festivalConfig[activeFestival].title,
+                days: String(days).padStart(2, '0'),
+                hours: String(hours).padStart(2, '0'),
+                minutes: String(minutes).padStart(2, '0'),
+                seconds: String(seconds).padStart(2, '0')
+            };
+        }
+
+        function drawFestivalCountdownIOS() {
+            const { title, days, hours, minutes, seconds } = calculateFestivalCountdown();
+            ctxIOS.clearRect(0, 0, canvasIOS.width, canvasIOS.height);
+            ctxIOS.fillStyle = '#0a0a1a';
+            ctxIOS.fillRect(0, 0, canvasIOS.width, canvasIOS.height);
+            ctxIOS.strokeStyle = '#4dabff';
+            ctxIOS.lineWidth = 2;
+            ctxIOS.beginPath();
+            ctxIOS.roundRect(5, 5, canvasIOS.width - 10, canvasIOS.height - 10, 8);
+            ctxIOS.stroke();
+            ctxIOS.strokeStyle = '#9c27b0';
+            ctxIOS.lineWidth = 1;
+            ctxIOS.beginPath();
+            ctxIOS.roundRect(10, 10, canvasIOS.width - 20, canvasIOS.height - 20, 6);
+            ctxIOS.stroke();
+            ctxIOS.fillStyle = 'rgba(156, 39, 176, 0.5)';
+            ctxIOS.fillRect(15, 30, 3, 40);
+            ctxIOS.fillRect(canvasIOS.width - 18, 30, 3, 40);
+            ctxIOS.fillRect(15, 170, 3, 40);
+            ctxIOS.fillRect(canvasIOS.width - 18, 170, 3, 40);
+            ctxIOS.strokeStyle = '#4dabff';
+            ctxIOS.lineWidth = 2;
+            ctxIOS.shadowColor = '#4dabff';
+            ctxIOS.shadowBlur = 8;
+            ctxIOS.beginPath();
+            ctxIOS.moveTo(20, 90);
+            ctxIOS.lineTo(canvasIOS.width - 20, 90);
+            ctxIOS.stroke();
+            ctxIOS.shadowBlur = 0;
+            ctxIOS.font = '16px bold';
+            ctxIOS.fillStyle = '#4dabff';
+            ctxIOS.textAlign = 'center';
+            ctxIOS.textBaseline = 'top';
+            ctxIOS.shadowColor = '#4dabff';
+            ctxIOS.shadowBlur = 5;
+            ctxIOS.fillText(title, canvasIOS.width / 2, 30);
+            ctxIOS.shadowBlur = 0;
+            ctxIOS.font = '18px bold';
+            ctxIOS.fillStyle = '#fff';
+            ctxIOS.textAlign = 'center';
+            ctxIOS.textBaseline = 'middle';
+            ctxIOS.shadowColor = '#9c27b0';
+            ctxIOS.shadowBlur = 4;
+            const timeText = `${days}天  ${hours}时  ${minutes}分  ${seconds}秒`;
+            ctxIOS.fillText(timeText, canvasIOS.width / 2, canvasIOS.height / 2 + 15);
+            ctxIOS.shadowBlur = 0;
+        }
+
+        // 画中画切换：视频已经在播放了，直接弹
+        async function togglePiPIOS() {
+            try {
+                if (document.pictureInPictureElement) {
+                    await document.exitPictureInPicture();
+                    pipBtn.textContent = '再次点击开画中画';
+                } else {
+                    await videoIOS.requestPictureInPicture();
+                    pipBtn.textContent = '退出画中画';
+                }
+            } catch (err) {
+                // 替换为SweetAlert2错误样式
+                Swal.fire({
+                    title: '画中画操作失败',
+                    text: err.message,
+                    icon: 'error',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: '确认'
+                });
+            }
+        }
+
+        // ========== 关键！第一次点击就强制播放视频 ==========
+        pipBtn.addEventListener('click', async function() {
+            try {
+                if (!isStreamReady) {
+                    // 第一次点击：初始化流 + 启动倒计时 + 强制播放视频！
+                    await initCanvasStreamIOS();
+                    drawFestivalCountdownIOS();
+                    countdownTimerIOS = setInterval(drawFestivalCountdownIOS, 1000);
+                    // 强制播放！！！！！！！！！！！！！！！
+                    await videoIOS.play().catch(err => console.log("播放提示:", err.message));
+                    if (videoIOS.paused) {
+                        videoIOS.currentTime = 0;
+                        await videoIOS.play();
+                    }
+                    isStreamReady = true;
+                    pipBtn.textContent = '再次点击开画中画'; // 提示用户第二次点击
+                } else {
+                    // 第二次点击：直接弹画中画
+                    await togglePiPIOS();
+                }
+            } catch (err) {
+                // 替换为SweetAlert2错误样式
+                Swal.fire({
+                    title: '操作失败',
+                    text: err.message,
+                    icon: 'error',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: '确认'
+                });
+            }
+        });
+
+        window.addEventListener('load', () => {
+            initCanvasStreamIOS().catch(() => {});
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (countdownTimerIOS) clearInterval(countdownTimerIOS);
+            if (canvasStreamIOS) canvasStreamIOS.getTracks().forEach(track => track.stop());
+            if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {});
+        });
+    </script>
+</body>
+</html>

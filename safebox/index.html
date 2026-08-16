@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safebox - 隐私保险箱</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        body {
+            background: #0f172a; /* 深蓝底 */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        /* 极客网格背景 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            z-index: -1;
+            animation: gridScroll 15s linear infinite;
+        }
+        /* 霓虹光晕背景 */
+        .glow-container {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.2), transparent 70%);
+            z-index: -1;
+            filter: blur(80px);
+            animation: glowPulse 8s ease-in-out infinite alternate;
+        }
+        /* 标题样式 */
+        .title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 4rem;
+            background: linear-gradient(90deg, #38bdf8, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+            text-align: center;
+            padding: 0 1rem;
+        }
+        /* 按钮容器 */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            width: 90%;
+            max-width: 800px;
+        }
+        /* 极客按钮样式 */
+        .safe-btn {
+            padding: 1.2rem 2rem;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid;
+            border-image: linear-gradient(45deg, #38bdf8, #8b5cf6) 1;
+            border-radius: 8px;
+            color: #e0f2fe;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2), inset 0 0 8px rgba(139, 92, 246, 0.1);
+        }
+        /* 按钮hover特效 */
+        .safe-btn:hover {
+            transform: translateY(-5px);
+            border-image: linear-gradient(45deg, #8b5cf6, #ec4899) 1;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.4), inset 0 0 12px rgba(236, 72, 153, 0.2);
+            color: #f0abfc;
+        }
+        /* 按钮点击反馈 */
+        .safe-btn:active {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+        /* 底部说明 */
+        .footer {
+            position: absolute;
+            bottom: 2rem;
+            color: rgba(148, 163, 184, 0.6);
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 0 1rem;
+        }
+        /* 动画关键帧 */
+        @keyframes gridScroll {
+            0% { background-position: 0 0; }
+            100% { background-position: 30px 30px; }
+        }
+        @keyframes glowPulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            100% { transform: scale(1.2); opacity: 0.9; }
+        }
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2.2rem;
+                margin-bottom: 3rem;
+            }
+            .btn-grid {
+                gap: 1rem;
+            }
+            .safe-btn {
+                padding: 1rem 1.5rem;
+                font-size: 1rem;
+            }
+        }
+        /* 原封不动移植的返回主页按钮样式 */
+        .back-home {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 99999;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            border: 1px solid #ffc107;
+            color: #fff;
+            text-decoration: none;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+        .back-home:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <!-- 原封不动移植的返回主页按钮 HTML -->
+    <a href="https://ericoec.github.io" class="back-home" target="_self">← 主页</a>
+    
+    <div class="glow-container"></div>
+    <h1 class="title">SAFEBOX 隐私保险箱</h1>
+    
+    <div class="btn-grid">
+        <!-- 已实现：图片混淆 -->
+        <a href="hide-img.html" class="safe-btn">🔒 图片混淆</a>
+        <!-- 已规划：Base64编码 -->
+        <a href="base64.html" class="safe-btn">📜 Base64 编解码</a>
+        <!-- 留空待添加：推荐功能1 -->
+        <a href="safe-blur.html" class="safe-btn">🫥 可逆隐私打码（敬请期待）</a>
+        <!-- 留空待添加：推荐功能2 -->
+        <a href="img-stego.html" class="safe-btn">🤐 图片隐写术（敬请期待）</a>
+        <!-- 留空待添加：推荐功能3 -->
+        <a href="file-aes.html" class="safe-btn">📁 文件AES加密（敬请期待）</a>
+        <!-- 留空待添加：推荐功能4 -->
+        <a href="text-safe.html" class="safe-btn">✍️ 文本隐私加密（敬请期待）</a>
+    </div>
+
+    <div class="footer">
+        本地处理 · 无后端泄露 · 安全可控 | 所有功能仅在浏览器内运行
+    </div>
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <!-- 关键：苹果钱包原生识别头 -->
+    <meta name="format-detection" content="telephone=no">
+    <title>苹果钱包卡包生成器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif; }
+        body { max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f7; }
+        .container { background: #fff; padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+        h1 { text-align: center; color: #1d1d1f; margin-bottom: 2rem; font-size: 1.8rem; font-weight: 600; }
+        .form-group { margin-bottom: 1.8rem; }
+        label { display: block; margin-bottom: 0.7rem; font-weight: 600; color: #333; font-size: 0.95rem; }
+        input, select, textarea, button { width: 100%; padding: 0.9rem 1.2rem; border: 1px solid #e5e5e7; border-radius: 10px; font-size: 1rem; background: #fff; transition: border 0.2s; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #0071e3; }
+        textarea { min-height: 90px; resize: vertical; line-height: 1.5; }
+        select { color: #333; cursor: pointer; }
+        button { background: #0071e3; color: #fff; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        button:hover { background: #0077ed; }
+        button:disabled { background: #a8a8a8; cursor: not-allowed; pointer-events: none; }
+        .toggle-btn { background: #f5f5f7; color: #1d1d1f; margin-bottom: 1.5rem; }
+        .toggle-btn:hover { background: #e8e8ed; }
+        .advanced-group { display: none; margin-top: 2rem; padding-top: 2rem; border-top: 1px dashed #e5e5e7; }
+        .preview { margin-top: 1rem; padding: 1rem; border: 1px solid #e5e5e7; border-radius: 8px; text-align: center; min-height: 80px; display: flex; align-items: center; justify-content: center; }
+        .preview img { max-height: 80px; max-width: 100%; border-radius: 6px; margin: 0.5rem 0; }
+        #debugInfo { margin: 1.5rem 0; padding: 1rem 1.2rem; border-radius: 8px; display: none; font-size: 0.95rem; line-height: 1.6; }
+        .debug-success { background: #e6fffa; color: #26a69a; border: 1px solid #b2f5ea; }
+        .debug-error { background: #ffebee; color: #e53935; border: 1px solid #ffcdd2; }
+        .btn-group { display: flex; gap: 1.2rem; margin-top: 2rem; }
+        .btn-group button { flex: 1; padding: 1rem; font-size: 1.05rem; }
+        .action-link { display: block; text-align: center; margin-top: 1.5rem; color: #fff; background: #34c759; text-decoration: none; font-weight: 600; padding: 1rem; border-radius: 10px; transition: all 0.2s; }
+        .action-link:hover { background: #30b752; }
+        .action-link:disabled { background: #a8e5b4; cursor: not-allowed; pointer-events: none; }
+        .must { color: #ff3b30; }
+        .tip { color: #666; margin-top: 0.5rem; font-size: 0.85rem; line-height: 1.4; }
+        .ios-tip { background: #fffbeb; border: 1px solid #ffe082; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; color: #f57c00; text-align: center; }
+    </style>
+    <!-- 二维码/打包依赖 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>苹果钱包卡包生成器</h1>
+        <!-- iOS专属提示 -->
+        <div class="ios-tip">📱 iOS用户直接点「唤起苹果钱包」，自动弹出添加凭证窗口，无需下载！</div>
+
+        <!-- 普通模式-必填项 -->
+        <div class="form-group">
+            <label for="passType">卡包类型 <span class="must">*</span></label>
+            <select id="passType" required>
+                <option value="membership">会员卡</option>
+                <option value="coupon">优惠券</option>
+                <option value="eventTicket">门票</option>
+                <option value="storeCard">储值卡</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="passName">钱包内显示名称 <span class="must">*</span></label>
+            <input type="text" id="passName" placeholder="星巴克会员卡、XX满减优惠券" required>
+            <div class="tip">添加到钱包后，列表中显示的名称</div>
+        </div>
+        <div class="form-group">
+            <label for="passTitle">卡面主标题 <span class="must">*</span></label>
+            <input type="text" id="passTitle" placeholder="尊贵会员、满100减50、XX演唱会门票" required>
+            <div class="tip">卡包正面最大的文字</div>
+        </div>
+        <div class="form-group">
+            <label for="passCode">核心码（卡号/券码/门票码）<span class="must">*</span></label>
+            <input type="text" id="passCode" placeholder="1008611、YH2026001、NO.123456" required>
+            <div class="tip">自动生成二维码/条形码，显示在卡面核心位置</div>
+        </div>
+
+        <!-- 高级模式开关 -->
+        <button class="toggle-btn" id="advancedToggle">展开高级自定义 ▼</button>
+
+        <!-- 高级模式-自定义项 -->
+        <div class="advanced-group" id="advancedGroup">
+            <div class="form-group">
+                <label>卡面颜色配置</label>
+                <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                    <input type="text" id="bgColor" placeholder="背景色" value="FF5722" maxlength="6" style="padding: 0.3rem; height: 45px; text-align: center;">
+                    <input type="text" id="textColor" placeholder="文字色" value="FFFFFF" maxlength="6" style="padding: 0.3rem; height: 45px; text-align: center;">
+                    <input type="text" id="stripColor" placeholder="条纹色" value="E64A19" maxlength="6" style="padding: 0.3rem; height: 45px; text-align: center;">
+                </div>
+                <div class="tip">6位16进制色值（无#），例：红色FF0000、白色FFFFFF</div>
+            </div>
+
+            <div class="form-group">
+                <label for="logoUpload">卡面Logo（100x100 PNG透明，<100KB）</label>
+                <input type="file" id="logoUpload" accept="image/png">
+                <div class="preview" id="logoPreview">Logo预览（透明PNG最佳）</div>
+            </div>
+            <div class="form-group">
+                <label for="stripUpload">卡面条纹图（640x100 PNG，<150KB）</label>
+                <input type="file" id="stripUpload" accept="image/png">
+                <div class="preview" id="stripPreview">条纹图预览（卡面顶部条纹）</div>
+            </div>
+
+            <div class="form-group">
+                <label for="passSubtitle">卡面副标题</label>
+                <input type="text" id="passSubtitle" placeholder="全国通用、2026年有效、VIP专享">
+            </div>
+            <div class="form-group">
+                <label for="passDescription">卡包详情描述</label>
+                <textarea id="passDescription" placeholder="本会员卡为XX品牌通用凭证，凭码享8折优惠；优惠券有效期至2026.12.31，不与其他活动叠加"></textarea>
+                <div class="tip">添加到钱包后，点击「i」图标显示的详情</div>
+            </div>
+
+            <div class="form-group">
+                <label for="expireDate">卡包有效期</label>
+                <input type="date" id="expireDate">
+                <div class="tip">不填则永久有效，过期后钱包会提示失效</div>
+            </div>
+
+            <div class="form-group">
+                <label for="codeType">码图类型</label>
+                <select id="codeType">
+                    <option value="QR_CODE">二维码（推荐）</option>
+                    <option value="CODE_128">条形码（CODE_128）</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="auxField1">辅助字段1</label>
+                <input type="text" id="auxField1" placeholder="门店地址：北京市朝阳区XX路（格式：标签：内容）">
+            </div>
+            <div class="form-group">
+                <label for="auxField2">辅助字段2</label>
+                <input type="text" id="auxField2" placeholder="咨询电话：400-000-0000">
+            </div>
+        </div>
+
+        <!-- 调试信息 -->
+        <div id="debugInfo"></div>
+
+        <!-- 操作按钮 -->
+        <div class="btn-group">
+            <button id="createBtn">生成卡包文件</button>
+            <button id="exportZipBtn">导出ZIP包（桌面端）</button>
+        </div>
+
+        <!-- 核心唤起按钮 -->
+        <a href="javascript:;" id="callWallet" class="action-link" disabled>📱 唤起苹果钱包（iOS专属）</a>
+    </div>
+
+    <script>
+        let pkpassBlob = null;
+        let pkpassFileName = '';
+        // 高级模式切换
+        const advancedToggle = document.getElementById('advancedToggle');
+        const advancedGroup = document.getElementById('advancedGroup');
+        advancedToggle.addEventListener('click', () => {
+            const isOpen = advancedGroup.style.display === 'block';
+            advancedGroup.style.display = isOpen ? 'none' : 'block';
+            advancedToggle.textContent = isOpen ? '展开高级自定义 ▼' : '收起高级自定义 ▲';
+        });
+
+        // 苹果官方必备默认图标（解决问号，固定尺寸）
+        const DEFAULT_ICONS = {
+            icon: 'iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNi4wLjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp0aWZmPSJodHRwOi8vbnMuYWRvYmUuY29tL3RpZmYvMS4wLyI+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOkNvbXByZXNzaW9uPjE8L3RpZmY6Q29tcHJlc3Npb24+CiAgICAgICAgIDx0aWZmOk9wZW4gYmFzZWxpbmU9IjEwIiBzdHJva2U9IiM0NDQ0NDQiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48L3RpZmY6T3Blbj4KICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+',
+            logo: 'iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFHGlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNi4wLjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp0aWZmPSJodHRwOi8vbnMuYWRvYmUuY29tL3RpZmYvMS4wLyI+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOkNvbXByZXNzaW9uPjE8L3RpZmY6Q29tcHJlc3Npb24+CiAgICAgICAgIDx0aWZmOk9wZW4gYmFzZWxpbmU9IjE1IiBzdHJva2U9IiMwMDcwZmUiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48L3RpZmY6T3Blbj4KICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+',
+            strip: 'iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFnElUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNi4wLjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp0aWZmPSJodHRwOi8vbnMuYWRvYmUuY29tL3RpZmYvMS4wLyI+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOkNvbXByZXNzaW9uPjE8L3RpZmY6Q29tcHJlc3Npb24+CiAgICAgICAgIDx0aWZmOk9wZW4gYmFzZWxpbmU9IjEwMCIgc3Ryb2tlPSIjRkY1NzIyIiBzdHJva2Utd2lkdGg9IjEwMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48L3RpZmY6T3Blbj4KICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+'
+        };
+
+        // 图片转Base64+预览（严格限制PNG/大小）
+        function imgToBase64(fileInput, previewEl, maxSize) {
+            return new Promise((resolve, reject) => {
+                const file = fileInput.files[0];
+                if (!file) return resolve('');
+                if (file.type !== 'image/png') return reject('仅支持PNG格式图片！');
+                if (file.size > maxSize) return reject(`图片超过${maxSize/1024}KB，请压缩！`);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewEl.innerHTML = `<img src="${e.target.result}" alt="预览">`;
+                    resolve(e.target.result.split(',')[1]);
+                };
+                reader.onerror = (err) => reject(`图片解析失败：${err.message}`);
+                reader.readAsDataURL(file);
+            });
+        }
+        // 绑定图片预览
+        document.getElementById('logoUpload').addEventListener('change', () => imgToBase64(document.getElementById('logoUpload'), document.getElementById('logoPreview'), 100*1024));
+        document.getElementById('stripUpload').addEventListener('change', () => imgToBase64(document.getElementById('stripUpload'), document.getElementById('stripPreview'), 150*1024));
+
+        // 生成唯一ID（苹果规范要求）
+        function generateUniqueId() {
+            return 'P' + Math.random().toString(36).slice(2, 18) + Date.now().toString(36);
+        }
+        // 解析辅助字段
+        function parseAuxField(str) {
+            if (!str || !str.includes('：')) return null;
+            const [label, value] = str.split('：').map(v => v.trim());
+            return label && value ? { label, value } : null;
+        }
+
+        // 生成苹果官方规范pass.json
+        async function generatePassJson() {
+            // 获取表单值
+            const passType = document.getElementById('passType').value;
+            const passName = document.getElementById('passName').value.trim();
+            const passTitle = document.getElementById('passTitle').value.trim();
+            const passCode = document.getElementById('passCode').value.trim();
+            const bgColor = document.getElementById('bgColor').value.trim() || 'FF5722';
+            const textColor = document.getElementById('textColor').value.trim() || 'FFFFFF';
+            const stripColor = document.getElementById('stripColor').value.trim() || 'E64A19';
+            const passSubtitle = document.getElementById('passSubtitle').value.trim();
+            const passDescription = document.getElementById('passDescription').value.trim() || `${passName} - 苹果钱包卡包`;
+            const expireDate = document.getElementById('expireDate').value;
+            const codeType = document.getElementById('codeType').value;
+            const auxField1 = parseAuxField(document.getElementById('auxField1').value);
+            const auxField2 = parseAuxField(document.getElementById('auxField2').value);
+            // 图片Base64（无则用默认）
+            const logoBase64 = await imgToBase64(document.getElementById('logoUpload'), document.getElementById('logoPreview'), 100*1024).catch(() => DEFAULT_ICONS.logo);
+            const stripBase64 = await imgToBase64(document.getElementById('stripUpload'), document.getElementById('stripPreview'), 150*1024).catch(() => DEFAULT_ICONS.strip);
+
+            // 构造苹果官方规范结构
+            const passJson = {
+                formatVersion: 1, // 固定值，不可改
+                passTypeIdentifier: `pass.com.${generateUniqueId().toLowerCase()}`,
+                serialNumber: generateUniqueId(),
+                teamIdentifier: 'T' + Math.floor(Math.random() * 9999999999).toString(),
+                organizationName: '卡包生成器',
+                description: passDescription,
+                backgroundColor: `#${bgColor}`,
+                foregroundColor: `#${textColor}`,
+                stripColor: `#${stripColor}`,
+                barcodes: [{
+                    format: codeType,
+                    message: passCode,
+                    messageEncoding: 'UTF-8',
+                    altText: passCode
+                }],
+                [passType]: {
+                    primaryFields: [
+                        { key: 'title', label: '', value: passTitle, displayPriority: 0 },
+                        { key: 'code', label: '码', value: passCode, displayPriority: 1 }
+                    ],
+                    secondaryFields: [],
+                    auxiliaryFields: []
+                }
+            };
+            // 追加副标题/有效期/辅助字段
+            if (passSubtitle) passJson[passType].secondaryFields.push({ key: 'sub', label: '', value: passSubtitle, displayPriority: 2 });
+            if (expireDate) passJson.expirationDate = new Date(expireDate).toISOString();
+            if (auxField1) passJson[passType].auxiliaryFields.push({ key: 'aux1', label: auxField1.label, value: auxField1.value, displayPriority: 3 });
+            if (auxField2) passJson[passType].auxiliaryFields.push({ key: 'aux2', label: auxField2.label, value: auxField2.value, displayPriority: 4 });
+
+            return { passJson, logoBase64, stripBase64, passName };
+        }
+
+        // 核心生成PKPass（苹果规范：ZIP改后缀，低压缩）
+        async function generatePKPass() {
+            const debugEl = document.getElementById('debugInfo');
+            debugEl.style.display = 'block';
+            try {
+                // 校验必填项
+                const pn = document.getElementById('passName').value.trim();
+                const pt = document.getElementById('passTitle').value.trim();
+                const pc = document.getElementById('passCode').value.trim();
+                if (!pn || !pt || !pc) {
+                    debugEl.className = 'debug-error';
+                    debugEl.textContent = '❌ 请填写所有必填项（类型、名称、主标题、核心码）';
+                    return null;
+                }
+
+                // 生成json和资源
+                const { passJson, logoBase64, stripBase64, passName } = await generatePassJson();
+                const zip = new JSZip();
+                // 写入核心文件（苹果要求固定文件名）
+                zip.file('pass.json', JSON.stringify(passJson, null, 2), { encoding: 'utf8' });
+                zip.file('icon.png', DEFAULT_ICONS.icon, { base64: true }); // 必备，不可改
+                zip.file('logo.png', logoBase64, { base64: true });
+                zip.file('strip.png', stripBase64, { base64: true });
+
+                // 生成Blob（关键：苹果官方MIME类型，低压缩）
+                pkpassFileName = `${passName.replace(/[^\w\u4e00-\u9fa5]/g, '')}.pkpass`;
+                pkpassBlob = await zip.generateAsync({
+                    type: 'blob',
+                    compression: 'DEFLATE',
+                    compressionOptions: { level: 1 }, // 苹果要求低压缩
+                    mimeType: 'application/vnd.apple.pkpass' // 固定MIME，原生识别
+                });
+
+                // 生成成功
+                debugEl.className = 'debug-success';
+                debugEl.textContent = '✅ 卡包生成成功！iOS点「唤起苹果钱包」直接添加';
+                document.getElementById('callWallet').removeAttribute('disabled');
+                return pkpassBlob;
+            } catch (e) {
+                debugEl.className = 'debug-error';
+                debugEl.textContent = `❌ 生成失败：${e.message}`;
+                return null;
+            }
+        }
+
+        // 唤起苹果钱包（核心修复：移除download，用createObjectURL原生唤起）
+        function callAppleWallet() {
+            if (!pkpassBlob) return;
+            // 关键：创建临时URL，原生打开而非下载
+            const url = URL.createObjectURL(new Blob([pkpassBlob], { type: 'application/vnd.apple.pkpass' }));
+            // 新开窗口唤起原生凭证弹窗
+            const win = window.open(url, '_blank');
+            // 延时释放URL，避免内存泄漏
+            setTimeout(() => {
+                URL.revokeObjectURL(url);
+                win.close();
+            }, 3000);
+        }
+
+        // 导出ZIP（桌面端兼容）
+        async function exportZip() {
+            if (!pkpassBlob) {
+                const res = await generatePKPass();
+                if (!res) return;
+            }
+            const zip = new JSZip();
+            zip.file(pkpassFileName, pkpassBlob);
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            // 桌面端下载ZIP
+            const url = URL.createObjectURL(zipBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${pkpassFileName.replace('.pkpass', '')}_卡包文件.zip`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 绑定按钮事件
+        document.getElementById('createBtn').addEventListener('click', generatePKPass);
+        document.getElementById('exportZipBtn').addEventListener('click', exportZip);
+        document.getElementById('callWallet').addEventListener('click', callAppleWallet);
+    </script>
+</body>
+</html>

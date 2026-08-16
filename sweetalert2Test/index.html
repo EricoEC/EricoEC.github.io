@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SweetAlert2 所有图标样式测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background-color: #161929;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            gap: 20px;
+        }
+        .page-title {
+            color: #fff;
+            font-size: 28px;
+            text-shadow: 0 0 15px rgba(255,255,255,0.3);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            width: 100%;
+            max-width: 800px;
+        }
+        .alert-btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .alert-btn:hover {
+            background: rgba(0,0,0,0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+        .copyright {
+            position: fixed;
+            bottom: 20px;
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            text-align: center;
+        }
+    </style>
+    <!-- 引入 document 文件夹中的 SweetAlert2 资源（根目录下的 document 文件夹） -->
+    <link rel="stylesheet" href="documents/sweetalert2.min.css">
+</head>
+<body>
+    <h1 class="page-title">SweetAlert2 所有图标样式测试</h1>
+
+    <div class="btn-group">
+        <button class="alert-btn" data-icon="success">✅ 成功 (success)</button>
+        <button class="alert-btn" data-icon="error">❌ 错误 (error)</button>
+        <button class="alert-btn" data-icon="warning">⚠️ 警告 (warning)</button>
+        <button class="alert-btn" data-icon="info">ℹ️ 信息 (info)</button>
+        <button class="alert-btn" data-icon="question">❓ 疑问 (question)</button>
+        <button class="alert-btn" data-icon="none">🚫 无图标 (none)</button>
+    </div>
+
+    <div class="copyright">点击按钮查看对应 SweetAlert2 弹窗样式</div>
+
+    <!-- 引入 document 文件夹中的 SweetAlert2 JS 资源 -->
+    <script src="documents/sweetalert2.all.min.js"></script>
+    <script>
+        // 给所有按钮绑定点击事件
+        document.querySelectorAll('.alert-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const iconType = this.getAttribute('data-icon');
+                // 统一弹窗文本为“测试”，图标为按钮对应的类型
+                Swal.fire({
+                    title: '测试',
+                    text: '测试',
+                    icon: iconType,
+                    confirmButtonText: '确定',
+                    confirmButtonColor: '#3085d6',
+                    backdrop: 'rgba(0,0,0,0.5)',
+                    allowOutsideClick: false
+                });
+            });
+        });
+    </script>
+</body>
+</html>

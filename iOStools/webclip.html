@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Clip 生成器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
+        .container { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; margin-bottom: 2rem; color: #333; }
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
+        input, button, textarea, select { width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; }
+        textarea { min-height: 80px; resize: vertical; }
+        button { background: #0071e3; color: white; border: none; cursor: pointer; margin-top: 1rem; }
+        button:hover { background: #0077ed; }
+        .toggle-btn { background: #f5f5f5; color: #333; margin-bottom: 1rem; }
+        .toggle-btn:hover { background: #e5e5e5; }
+        .advanced-group { display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed #ddd; }
+        .checkbox-group { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .checkbox-group input { width: auto; }
+        #debugInfo { margin: 1rem 0; padding: 1rem; border-radius: 5px; display: none; }
+        .debug-success { background: #e6fffa; color: #34c759; border: 1px solid #34c759; }
+        .debug-error { background: #ffebee; color: #ff3b30; border: 1px solid #ff3b30; }
+        #preview { margin-top: 1rem; text-align: center; }
+        #preview img { width: 64px; height: 64px; border-radius: 12px; margin-bottom: 1rem; }
+        .download-group { display: flex; gap: 1rem; margin-top: 1rem; }
+        .download-group button { flex: 1; }
+        .install-link { display: block; text-align: center; margin-top: 1rem; color: #0071e3; text-decoration: none; }
+        .warning { color: #ff3b30; margin-top: 0.5rem; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Web Clip 描述文件生成器</h1>
+
+        <!-- 普通模式 -->
+        <div class="form-group">
+            <label for="appName">应用名称（主屏显示）</label>
+            <input type="text" id="appName" placeholder="例如：我的H5应用" required>
+        </div>
+        <div class="form-group">
+            <label for="webUrl">网页链接（必须HTTPS）</label>
+            <input type="url" id="webUrl" placeholder="https://www.example.com" required>
+            <div class="warning">⚠️ 非HTTPS链接iOS会直接拦截安装</div>
+        </div>
+
+        <!-- 高级模式开关 -->
+        <button class="toggle-btn" id="advancedToggle">展开高级选项 ▼</button>
+
+        <!-- 高级模式（默认隐藏） -->
+        <div class="advanced-group" id="advancedGroup">
+            <div class="form-group">
+                <label for="iconUpload">上传图标（180x180 PNG，<200KB）</label>
+                <input type="file" id="iconUpload" accept="image/png">
+                <div class="warning">⚠️ 仅支持PNG格式，过大可能导致安装失败</div>
+                <div id="preview"></div>
+            </div>
+            <div class="form-group">
+                <label for="payloadDesc">描述文件说明</label>
+                <textarea id="payloadDesc" placeholder="例如：安装此描述文件可在主屏添加网页快捷方式"></textarea>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="fullScreen" checked>
+                <label for="fullScreen">全屏模式（隐藏Safari地址栏，默认开启）</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="isRemovable" checked>
+                <label for="isRemovable">允许删除图标（默认开启，关闭后无法删除）</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="precomposed" checked>
+                <label for="precomposed">禁用系统图标高光（默认开启，图标更清晰）</label>
+            </div>
+        </div>
+
+        <!-- Debug 信息 -->
+        <div id="debugInfo"></div>
+
+        <!-- 安装/下载区域 -->
+        <div id="installArea" style="display: none; margin: 1.5rem 0;">
+            <a href="#" id="installLink" class="install-link">Safari 直接安装</a>
+            <div class="warning">⚠️ 必须使用Safari浏览器，第三方浏览器不支持</div>
+        </div>
+
+        <div class="download-group">
+            <button id="generateBtn">生成并校验文件</button>
+            <button id="zipBtn">打包成 ZIP 下载</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script>
+        let currentConfigBlob = null;
+        let currentAppName = '';
+        const advancedToggle = document.getElementById('advancedToggle');
+        const advancedGroup = document.getElementById('advancedGroup');
+
+        // 高级模式切换
+        advancedToggle.addEventListener('click', () => {
+            const isOpen = advancedGroup.style.display === 'block';
+            advancedGroup.style.display = isOpen ? 'none' : 'block';
+            advancedToggle.textContent = isOpen ? '展开高级选项 ▼' : '收起高级选项 ▲';
+        });
+
+        // 图标预览
+        document.getElementById('iconUpload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('preview').innerHTML = `<img src="${e.target.result}" alt="图标预览">`;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 生成标准UUID
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                const r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8);
+                return v.toString(16);
+            });
+        }
+
+        // 图片转Base64 + 大小校验
+        function imageToBase64(file) {
+            return new Promise((resolve, reject) => {
+                if (!file) return resolve('');
+                if (file.size > 200 * 1024) return reject('图标超过200KB限制，请压缩后上传');
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 前端 Debug 校验 XML 语法和字段
+        function validateXML(xmlStr) {
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(xmlStr, 'application/xml');
+                const errors = doc.getElementsByTagName('parsererror');
+                if (errors.length > 0) {
+                    const errMsg = errors[0].textContent.trim().substring(0, 250);
+                    return { valid: false, msg: `XML语法错误：${errMsg}` };
+                }
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                const uuidMatches = xmlStr.match(/<string>([0-9a-f-]+)<\/string>/g) || [];
+                for (const m of uuidMatches) {
+                    const uuid = m.replace(/<\/?string>/g, '');
+                    if (!uuidRegex.test(uuid)) {
+                        return { valid: false, msg: `UUID格式错误：${uuid}` };
+                    }
+                }
+                return { valid: true, msg: '✅ XML语法、字段格式均合法，可正常安装' };
+            } catch (e) {
+                return { valid: false, msg: `校验失败：${e.message}` };
+            }
+        }
+
+        // 生成配置文件核心逻辑
+        async function generateAndValidate() {
+            // 普通模式字段
+            const appName = document.getElementById('appName').value.trim();
+            const webUrl = document.getElementById('webUrl').value.trim();
+            // 高级模式字段
+            const iconFile = document.getElementById('iconUpload').files[0];
+            const payloadDesc = document.getElementById('payloadDesc').value.trim() || `安装${appName}网页快捷方式`;
+            const fullScreen = document.getElementById('fullScreen').checked;
+            const isRemovable = document.getElementById('isRemovable').checked;
+            const precomposed = document.getElementById('precomposed').checked;
+            // Debug 元素
+            const debugEl = document.getElementById('debugInfo');
+            debugEl.style.display = 'block';
+            debugEl.className = '';
+
+            // 基础校验
+            if (!appName || !webUrl) {
+                debugEl.className = 'debug-error';
+                debugEl.textContent = '❌ 错误：请填写应用名称和HTTPS链接';
+                return null;
+            }
+            if (!webUrl.startsWith('https://')) {
+                debugEl.className = 'debug-error';
+                debugEl.textContent = '❌ 错误：链接必须是HTTPS协议';
+                return null;
+            }
+
+            // 处理图标Base64
+            let iconBase64 = '';
+            try {
+                iconBase64 = await imageToBase64(iconFile);
+            } catch (e) {
+                debugEl.className = 'debug-error';
+                debugEl.textContent = `❌ 图标错误：${e}`;
+                return null;
+            }
+
+            // 生成符合官方规范的字段
+            const uuid1 = generateUUID();
+            const uuid2 = generateUUID();
+            const sanitizedName = appName.replace(/[^a-zA-Z0-9]/g, '');
+            const identifier = `com.webclip.${sanitizedName || 'default'}`;
+
+            // 拼接XML内容（所有标签正确闭合，高级字段按需添加）
+            const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadDisplayName</key>
+    <string>${appName}</string>
+    <key>PayloadDescription</key>
+    <string>${payloadDesc}</string>
+    <key>PayloadIdentifier</key>
+    <string>${identifier}.profile</string>
+    <key>PayloadUUID</key>
+    <string>${uuid1}</string>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadType</key>
+            <string>com.apple.webClip.managed</string>
+            <key>PayloadIdentifier</key>
+            <string>${identifier}.webclip</string>
+            <key>PayloadUUID</key>
+            <string>${uuid2}</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>URL</key>
+            <string>${webUrl}</string>
+            <key>Label</key>
+            <string>${appName}</string>
+            <key>FullScreen</key>
+            <${fullScreen ? 'true' : 'false'}/>
+            <key>IsRemovable</key>
+            <${isRemovable ? 'true' : 'false'}/>
+            <key>Precomposed</key>
+            <${precomposed ? 'true' : 'false'}/>
+            ${iconBase64 ? `<key>Icon</key><data>${iconBase64}</data>` : ''}
+        </dict>
+    </array>
+</dict>
+</plist>`;
+
+            // Debug 校验
+            const validateResult = validateXML(xmlContent);
+            if (!validateResult.valid) {
+                debugEl.className = 'debug-error';
+                debugEl.textContent = validateResult.msg;
+                return null;
+            }
+
+            // 校验通过
+            debugEl.className = 'debug-success';
+            debugEl.textContent = validateResult.msg;
+            currentAppName = appName;
+            return xmlContent;
+        }
+
+        // 下载文件
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            return blob;
+        }
+
+        // 事件监听 - 生成并校验
+        document.getElementById('generateBtn').addEventListener('click', async () => {
+            const xmlContent = await generateAndValidate();
+            if (!xmlContent) return;
+            currentConfigBlob = downloadFile(
+                xmlContent,
+                `${currentAppName}.mobileconfig`,
+                'application/x-apple-aspen-config'
+            );
+            document.getElementById('installArea').style.display = 'block';
+            document.getElementById('installLink').href = URL.createObjectURL(currentConfigBlob);
+        });
+
+        // 事件监听 - 打包ZIP
+        document.getElementById('zipBtn').addEventListener('click', async () => {
+            const xmlContent = await generateAndValidate();
+            if (!xmlContent) return;
+            const zip = new JSZip();
+            zip.file(`${currentAppName}.mobileconfig`, xmlContent, {
+                type: 'application/x-apple-aspen-config'
+            });
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            downloadFile(zipBlob, `${currentAppName}.zip`, 'application/zip');
+        });
+
+        // 事件监听 - 直接安装
+        document.getElementById('installLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!currentConfigBlob) return;
+            window.open(URL.createObjectURL(currentConfigBlob), '_blank');
+            alert('请在Safari新窗口点击「允许」→ 前往「设置」完成安装');
+        });
+    </script>
+</body>
+</html>
